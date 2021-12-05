@@ -98,3 +98,28 @@ function from_ngram(file::String, frequency::Bool, k::Integer)
     korder = SimpleWeightedDiGraph(ko_src, ko_dest, ko_weights)
     return forder, fo_map, korder, ko_map
 end
+
+
+"""
+Convert edges of ko to walks of length k. Use edge
+weights in ko as weights for walks.
+"""
+function walks_from_edges(ko, ko_map, fo_map)
+    edges_as_walks = Vector{Tuple}()
+    A = adjacency_matrix(ko)
+    ko_rev_mapa = Dict(value => key for (key, value) in ko_map)
+    weights = Vector{Int64}()
+    for node in range(1, nv(ko))
+        ko_u = ko_rev_map[node]
+        adjacency = findall(>(0), A[node,:])
+        prefix = [fo_map[u] for u in ko_u]
+        for ne in adjacency
+            ko_v = ko_rev_map[ne]
+            walk = Vector(prefix)
+            push!(walk, fo_map[ko_v[end]])
+            push!(edges_as_walks, Tuple(u for u in walk))
+            push!(weights, A[node, ne])
+        end
+    end
+    return edges_as_walks, weights
+end
