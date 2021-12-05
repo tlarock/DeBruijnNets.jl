@@ -33,12 +33,20 @@ end
 """
 function random_walks(G, start_node, k, walks_per_node)
     curr_walks = Vector{Tuple}()
+    max_tries = walks_per_node*4
     for i in range(1, walks_per_node)
+	tries = 0
         walk = Tuple(randomwalk(G, start_node, k+1))
         while length(walk) < k+1
-            walk = randomwalk(G, start_node, k)
+            walk = randomwalk(G, start_node, k+1)
+	    tries += 1
+	    if tries == max_tries
+		println("Couldn't find a walk in $max_tries tries. \
+			Returning nothing.")
+		return nothing
+	    end
         end
-        push!(curr_walks, walk)
+	push!(curr_walks, Tuple(walk))
     end
     return curr_walks
 end
@@ -79,8 +87,9 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
     for i in range(1, nv(G))
         adjacency_dict[i] = findall(>(0), A[i,:])
     end
+    # We are only interested in nodes who have k-edge walks
+    nodes = [u for u in range(1, nv(G)) if path_counts[u] > 0]
     node_weights = Vector()
-    nodes = range(1, length(path_counts))
     for node in nodes
 	push!(node_weights, path_counts[node])
     end
@@ -99,11 +108,18 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
         if walks_per_node > 0
             if !haskey(walks_by_node, start_node)
                 curr_walks = random_walks(G, start_node, k, walks_per_node)
+		if curr_walks == nothing
+		    continue
+		end
                 walks_by_node[start_node] = curr_walks
             else
                 if length(walks_by_node) < path_counts[start_node]
                     curr_walks = random_walks(G, start_node, k, walks_per_node)
-                    push!(walks_by_node[start_node], curr_walks)
+		    if curr_walks != nothing
+                    	append!(walks_by_node[start_node], curr_walks)
+		    else
+			curr_walks = walks_by_node[start_node]
+		    end
                 else
                     curr_walks = walks_by_node[start_node]
                 end

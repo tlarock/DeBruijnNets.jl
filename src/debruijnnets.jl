@@ -107,7 +107,7 @@ weights in ko as weights for walks.
 function walks_from_edges(ko, ko_map, fo_map)
     edges_as_walks = Vector{Tuple}()
     A = adjacency_matrix(ko)
-    ko_rev_mapa = Dict(value => key for (key, value) in ko_map)
+    ko_rev_map = Dict(value => key for (key, value) in ko_map)
     weights = Vector{Int64}()
     for node in range(1, nv(ko))
         ko_u = ko_rev_map[node]
