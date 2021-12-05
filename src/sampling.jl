@@ -4,19 +4,17 @@ using Graphs, SimpleWeightedGraphs, StatsBase
 """
     Compute all k-edge walks from start_node
 """
-function all_walks(G, start_node, k)
+function all_walks(adjacency_dict, start_node, k)
     curr_walks = Vector{Tuple}()
-    neighbors = neighborhood(G, start_node, 1, dir=:out)
-    deleteat!(neighbors, findall(==(start_node), neighbors))
+    neighbors = adjacency_dict[start_node]
     for ne in neighbors
-	    push!(curr_walks, Tuple((start_node, ne)))
+	    edge = Tuple((start_node, ne))
+	    push!(curr_walks, Tuple(edge))
     end
-    
-    for i in range(1, k-1)
+    for i in range(2, k)
         new_walks = Vector{Tuple}()
         for walk in curr_walks
-            neighbors = neighborhood(G, walk[end], 1, dir=:out)
-	    deleteat!(neighbors, findall(==(walk[end]), neighbors))
+	    neighbors = adjacency_dict[walk[end]]
             if length(neighbors) > 0
                 for ne in neighbors
                     push!(new_walks, (walk..., ne))
@@ -51,9 +49,6 @@ end
 """
 function get_walk_probabilities!(walks, walk_weight_lookup, out_degrees)
     walk_weights = Vector{Float64}()
-    if length(walks) == 0
-	    print("SOMETHING WRONG")
-    end
     for w in walks
         if !haskey(walk_weight_lookup, w)
             prod = out_degrees[w[1]]
@@ -80,16 +75,14 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
     # dims=2 is row sum (out walks)
     out_degrees = sum(A, dims=2)
     path_counts = sum(A^k, dims=2)
+    adjacency_dict = Dict()
+    for i in range(1, nv(G))
+        adjacency_dict[i] = findall(>(0), A[i,:])
+    end
     node_weights = Vector()
     nodes = range(1, length(path_counts))
     for node in nodes
 	push!(node_weights, path_counts[node])
-	if path_counts[node] > 0 && sum(A[node,:]) == 0
-		println("Path counts make no sense")
-		println(node)
-		println(path_counts[node])
-		println(sum(A[node,:]))
-	end
     end
     node_probabilities = ProbabilityWeights(node_weights / sum(node_weights))
     
@@ -99,7 +92,6 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
     while length(walks) < num_walks
         if bias_nodes
             start_node = sample(nodes, node_probabilities)[1]
-	    neighbors = neighborhood(G, start_node, 1, dir=:out)
         else
             start_node = rand(nodes)[1]
         end
@@ -117,13 +109,8 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
                 end
             end
         else
-            curr_walks = all_walks(G, start_node, k)
+            curr_walks = all_walks(adjacency_dict, start_node, k)
             walks_by_node[start_node] = curr_walks
-	    if length(curr_walks) != sum(path_counts[start_node])
-		    println("Walks not the same as sum.")
-		    println(length(curr_walks))
-		    println(sum(path_counts[start_node]))
-	    end
         end
         
         # Sample one walk from walks_by_node
