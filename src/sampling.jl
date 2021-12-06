@@ -41,7 +41,7 @@ end
     Compute walks_per_node k-edge random walks through G
     starting from start_node.
 """
-function random_walks(G, start_node, k, walks_per_node)
+function random_walks(G, start_node::Integer, k::Integer, walks_per_node::Integer, verbose::Bool=false)
     curr_walks = Vector{Tuple}()
     max_tries = walks_per_node*4
     for i in range(1, walks_per_node)
@@ -50,7 +50,7 @@ function random_walks(G, start_node, k, walks_per_node)
         while length(walk) < k+1
             walk = randomwalk(G, start_node, k+1)
 	    tries += 1
-	    if tries == max_tries
+	    if tries == max_tries && verbose
 		println("Couldn't find a walk in $max_tries tries. \
 			Returning nothing.")
 		return nothing
@@ -99,7 +99,7 @@ end
     Sample from the complete DeBruijn graph defined by G.
 """
 function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::Integer,
-        walks_per_node::Integer, weight_walks::Bool, bias_nodes::Bool)
+        walks_per_node::Integer, weight_walks::Bool, bias_nodes::Bool, verbose::Bool=false)
     # Compute path counts from adjacency matrix
     A = adjacency_matrix(G)
     A[findall(>(0), A)] .= 1
@@ -155,6 +155,8 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
             walks[w] = walk
 	    end
     end
-    println("Computed $(length(walks)) length-$k walks out of $num_walks requested.")
+    if verbose
+	println("Computed $(length(walks)) length-$k walks out of $num_walks requested.")
+    end
     return walks
 end
