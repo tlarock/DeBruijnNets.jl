@@ -1,3 +1,4 @@
+using ArgParse
 include("../src/debruijnnets.jl");
 include("../src/sampling.jl");
 include("../src/motifs.jl")
@@ -12,15 +13,37 @@ function write_counts(sampled_counts, output_file)
     return nothing
 end
 
+function parse_commandline(args)
+    s = ArgParseSettings()
+    @add_arg_table s begin
+	"--input_file", "-i"
+        help = "Full path to input file"
+        #arg_type = String
+	"--frequency", "-f"
+	    help = "Frequencies in ngram?"
+	    action = :store_true
+end
+
+return parse_args(args, s)
+end
+
+arguments = parse_commandline(ARGS)
+
+println(arguments)
+input_filepath = arguments["input_file"]
+println(input_filepath)
+frequency = arguments["frequency"]
+println(frequency)
+
 num_samples = 10
 num_cpus = Threads.nthreads()
-input_filepath = "../../debruijn-nets/data/flights/old_data/coupons_2000_01_tiny.ngram"
+# input_filepath = "../../debruijn-nets/data/flights/old_data/coupons_2000_01_tiny.ngram"
 splitpath = split(input_filepath, '/')
 ngram_filename = splitpath[end]
 
-for k in [2]
+Threads.@threads for k in [2, 3, 4]
     println("k: $k")
-    fo, fo_map, ko, ko_map = from_ngram(input_filepath, true, k);
+    fo, fo_map, ko, ko_map = from_ngram(input_filepath, frequency, k);
     # Count motifs
     walks, walk_freqs = walks_from_edges(ko, ko_map, fo_map)
     empirical_motifs = count_motifs(walks, walk_freqs)
