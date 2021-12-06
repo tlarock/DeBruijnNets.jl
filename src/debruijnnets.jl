@@ -37,6 +37,21 @@ end
 
 
 """
+"""
+function remove_selfloops!(w)
+    i = 2
+    e = length(w)
+    while i < e
+        if w[i-1] == w[i]
+            deleteat!(w, i-1)
+            e-=1
+	else
+	    i+=1
+        end
+    end
+end
+
+"""
     Compute a DeBruijn graph of order k and it's
     associated first order graph from an ngram file
     with or without frequency values.
@@ -62,7 +77,7 @@ function from_ngram(file::String, frequency::Bool, k::Integer)
             walk = s
             freq = 1
         end
-        
+        remove_selfloops!(walk) 
         for i in range(1, length(walk))
             if i > 1
                 u = walk[i-1]
