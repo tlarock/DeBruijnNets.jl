@@ -2,6 +2,15 @@ using Graphs, SimpleWeightedGraphs, StatsBase
 
 
 """
+"""
+function get_adj_dict(G, A)
+    adjacency_dict = Dict()
+    for i in range(1, nv(G))
+        adjacency_dict[i] = findall(>(0), A[i,:])
+    end
+end
+
+"""
     Compute all k-edge walks from start_node
 """
 function all_walks(adjacency_dict, start_node, k)
@@ -55,22 +64,35 @@ end
 """
     Get the out-degree weighted probability of each walk
 """
-function get_walk_probabilities!(walks, walk_weight_lookup, out_degrees)
-    walk_weights = Vector{Float64}()
-    for w in walks
-        if !haskey(walk_weight_lookup, w)
-            prod = out_degrees[w[1]]
-            for i in range(2, length(w)-1)
-                prod *= out_degrees[i]
-            end
-            walk_weight_lookup[w] = prod
-        end
-        push!(walk_weights, walk_weight_lookup[w])
+function get_walk_probabilities!(walks, walk_weight_lookup, out_degrees, weight_walks)
+    if weight_walks
+	    walk_weights = Vector{Float64}()
+	    for w in walks
+		if !haskey(walk_weight_lookup, w)
+		    prod = out_degrees[w[1]]
+		    for i in range(2, length(w)-1)
+			prod *= out_degrees[i]
+		    end
+		    walk_weight_lookup[w] = prod
+		end
+		push!(walk_weights, walk_weight_lookup[w])
+	    end
+	    walk_weights /= sum(walk_weights)
+    else
+        walk_probabilities = Vector{Float64}(range(1, length(walks)))
+        fill!(walk_probabilities, 1. / length(walks))
     end
-    walk_weights /= sum(walk_weights)
     return walk_weights
     end
-    
+
+function sample_start_node(nodes, node_probabilities, bias_nodes)
+    if bias_nodes
+        start_node = sample(nodes, node_probabilities)[1]
+    else
+        start_node = rand(nodes)[1]
+    end
+    return start_node
+end
 
 """
     Sample from the complete DeBruijn graph defined by G.
@@ -80,31 +102,22 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
     # Compute path counts from adjacency matrix
     A = adjacency_matrix(G)
     A[findall(>(0), A)] .= 1
+    adjacency_dict = get_adj_dict(G, A)
     # dims=2 is row sum (out walks)
     out_degrees = sum(A, dims=2)
     path_counts = sum(A^k, dims=2)
-    adjacency_dict = Dict()
-    for i in range(1, nv(G))
-        adjacency_dict[i] = findall(>(0), A[i,:])
-    end
     # We are only interested in nodes who have k-edge walks
     nodes = [u for u in range(1, nv(G)) if path_counts[u] > 0]
     node_weights = Vector()
     for node in nodes
 	push!(node_weights, path_counts[node])
     end
-    node_probabilities = ProbabilityWeights(node_weights / sum(node_weights))
-    
-    walks = Vector{Tuple}()
+    node_probabilities = ProbabilityWeights(node_weights / sum(node_weights)) 
+    walks = Vector{Tuple}(undef, num_walks)
     walks_by_node = Dict()
     walk_weight_lookup = Dict()
-    while length(walks) < num_walks
-        if bias_nodes
-            start_node = sample(nodes, node_probabilities)[1]
-        else
-            start_node = rand(nodes)[1]
-        end
-        
+    for w in range(1, num_walks)
+	start_node = sample_start_node(nodes, node_probabilities, bias_nodes)
         if walks_per_node > 0
             if !haskey(walks_by_node, start_node)
                 curr_walks = random_walks(G, start_node, k, walks_per_node)
@@ -130,16 +143,16 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
         end
         
         # Sample one walk from walks_by_node
-        if weight_walks
-            walk_probabilities = get_walk_probabilities!(curr_walks, walk_weight_lookup, out_degrees)
-        else
-            walk_probabilities = Vector{Float64}(range(1, length(curr_walks)))
-            fill!(walk_probabilities, 1. / length(curr_walks))
-        end
+	walk_probabilities = get_walk_probabilities!(curr_walks, walk_weight_lookup,
+                                                     out_degrees, weight_walks)
        	if length(walk_probabilities) > 0 
-        	walk = sample(curr_walks, ProbabilityWeights(walk_probabilities))
-        	push!(walks, walk)
+            walk = sample(curr_walks, ProbabilityWeights(walk_probabilities))
+            walks[w] = walk
+        else
+            walks[w] = nothing
 	end
     end
+    walks = walks[walks.!=nothing]
+    println("Computed $(length(walks)) walks out of $num_walks requested.")
     return walks
 end
