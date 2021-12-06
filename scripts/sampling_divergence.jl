@@ -1,4 +1,4 @@
-using ArgParse, StatsBase, Statistics
+using ArgParse, StatsBase
 include("../src/debruijnnets.jl");
 include("../src/sampling.jl");
 include("../src/motifs.jl");
@@ -18,7 +18,7 @@ function divergence_by_nodes(G, k, true_counts, true_dist, walk_interval,
         for key in keys(sampled_counts)
             if key == "all"
                 walks = uniform_walk_sample(G, k, walk_interval,
-                                            -1, true, false)
+                                            -1, true, true)
             else
                 walks = uniform_walk_sample(G, k, walk_interval,
                                             key, true, true)
@@ -43,7 +43,7 @@ function write_to_file(output, output_file)
     open(output_file, "w") do file
         for (k, kdict) in output
 	    for (m, mtup) in kdict
-		out_str = "$k|$(m)|$(join(mtup[1], ","))|$(join(mtup[1], ","))\n"
+		out_str = "$k|$(m)|$(join(mtup[1], ","))|$(join(mtup[2], ","))\n"
                 write(file, out_str)
             end
         end
@@ -128,9 +128,12 @@ end
 kvals = [2, 3, 4]
 true_dist_dict = Dict()
 true_count_dict = Dict()
+adj = adjacency_matrix(G)
 for k in kvals
     true_dist_dict[k], true_count_dict[k] = get_truth(G, k)
+    println("Total walks at order k: $(sum(adj^k)).")
 end
+
 
 output = Dict(k=>Dict(method=>Array{Float64}(undef, runs, iterations) for method in ["all", 1, 10, 50, 100]) for k in kvals)
 Threads.@threads for i in range(1, runs)
@@ -143,12 +146,13 @@ Threads.@threads for i in range(1, runs)
             end
          end
     end
+    println(i)
 end
 
 mean_output = Dict(k=>Dict() for k in keys(output))
 for (k, kdict) in output
     for (method, method_arr) in kdict
-	    mean_output[k][method] = (mean(method_arr, dims=1), std(method_arr, dims=1))
+	    mean_output[k][method] = mean_and_std(method_arr, 1)
     end
 end
 

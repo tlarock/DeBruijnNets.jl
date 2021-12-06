@@ -40,7 +40,7 @@ end
 """
 function remove_selfloops!(w)
     i = 2
-    e = length(w)
+    e = length(w)+1
     while i < e
         if w[i-1] == w[i]
             deleteat!(w, i-1)
@@ -82,6 +82,9 @@ function from_ngram(file::String, frequency::Bool, k::Integer)
             if i > 1
                 u = walk[i-1]
                 v = walk[i]
+                if u == v
+		    println("walk: $walk has selfloops...")
+		end
                 fo_idx = add_to_mapping!(fo_map, u, fo_idx)
                 fo_idx = add_to_mapping!(fo_map, v, fo_idx)
                 if haskey(fo_edgelist, (fo_map[u],fo_map[v]))
