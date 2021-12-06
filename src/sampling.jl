@@ -8,6 +8,7 @@ function get_adj_dict(G, A)
     for i in range(1, nv(G))
         adjacency_dict[i] = findall(>(0), A[i,:])
     end
+    return adjacency_dict
 end
 
 """
@@ -117,22 +118,25 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
     walks_by_node = Dict()
     walk_weight_lookup = Dict()
     for w in range(1, num_walks)
-	start_node = sample_start_node(nodes, node_probabilities, bias_nodes)
+	    start_node = sample_start_node(nodes, node_probabilities, bias_nodes)
         if walks_per_node > 0
             if !haskey(walks_by_node, start_node)
                 curr_walks = random_walks(G, start_node, k, walks_per_node)
-		if curr_walks == nothing
-		    continue
-		end
+                while curr_walks == nothing
+                    curr_walks = random_walks(G, start_node, k, walks_per_node)
+                end
+                if curr_walks == nothing
+                    continue
+                end
                 walks_by_node[start_node] = curr_walks
             else
                 if length(walks_by_node) < path_counts[start_node]
                     curr_walks = random_walks(G, start_node, k, walks_per_node)
-		    if curr_walks != nothing
-                    	append!(walks_by_node[start_node], curr_walks)
-		    else
-			curr_walks = walks_by_node[start_node]
-		    end
+                    if curr_walks != nothing
+                        append!(walks_by_node[start_node], curr_walks)
+                    else
+                        curr_walks = walks_by_node[start_node]
+                    end
                 else
                     curr_walks = walks_by_node[start_node]
                 end
@@ -141,18 +145,16 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
             curr_walks = all_walks(adjacency_dict, start_node, k)
             walks_by_node[start_node] = curr_walks
         end
-        
-        # Sample one walk from walks_by_node
-	walk_probabilities = get_walk_probabilities!(curr_walks, walk_weight_lookup,
+       
+        if length(curr_walks) > 0 
+            # Sample one walk from walks_by_node
+	        walk_probabilities = get_walk_probabilities!(curr_walks, walk_weight_lookup,
                                                      out_degrees, weight_walks)
-       	if length(walk_probabilities) > 0 
+
             walk = sample(curr_walks, ProbabilityWeights(walk_probabilities))
             walks[w] = walk
-        else
-            walks[w] = nothing
-	end
+	    end
     end
-    walks = walks[walks.!=nothing]
-    println("Computed $(length(walks)) walks out of $num_walks requested.")
+    println("Computed $(length(walks)) length-$k walks out of $num_walks requested.")
     return walks
 end
