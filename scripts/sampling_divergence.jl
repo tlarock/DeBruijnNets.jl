@@ -1,4 +1,4 @@
-using ArgParse, StatsBase
+using ArgParse, StatsBase, Statistics
 include("../src/debruijnnets.jl");
 include("../src/sampling.jl");
 include("../src/motifs.jl");
@@ -42,8 +42,8 @@ end
 function write_to_file(output, output_file)
     open(output_file, "w") do file
         for (k, kdict) in output
-	    for (m, marr) in kdict
-	    	out_str = "$k|$(m)|$(join(marr, ","))\n"
+	    for (m, mtup) in kdict
+		out_str = "$k|$(m)|$(join(mtup[1], ","))|$(join(mtup[1], ","))\n"
                 write(file, out_str)
             end
         end
@@ -148,7 +148,7 @@ end
 mean_output = Dict(k=>Dict() for k in keys(output))
 for (k, kdict) in output
     for (method, method_arr) in kdict
-	    mean_output[k][method] = mean(method_arr, dims=1)
+	    mean_output[k][method] = (mean(method_arr, dims=1), std(method_arr, dims=1))
     end
 end
 
@@ -159,5 +159,5 @@ else
     model = "ba"
     param = m
 end   
-output_filename = "../../debruijn-nets/results/motifs/$(model)_param-$(param)_interval-$(walk_interval)_iters-$(iterations)_runs-$(runs)_kl_1g.csv"
+output_filename = "../../debruijn-nets/results/motifs/$(model)_N-$(N)_param-$(param)_interval-$(walk_interval)_iters-$(iterations)_runs-$(runs)_kl_1g.csv"
 write_to_file(mean_output, output_filename)
