@@ -2,6 +2,7 @@ using ArgParse
 include("../src/debruijnnets.jl");
 include("../src/sampling.jl");
 include("../src/motifs.jl")
+include("../src/utils.jl")
 
 function write_counts(sampled_counts, output_file)
     open(output_file, "w") do file
@@ -12,18 +13,6 @@ function write_counts(sampled_counts, output_file)
     end
     return nothing
 end
-
-
-function get_all_walks(G, k)
-    adjacency_dict = get_adj_dict(G, adjacency_matrix(G))
-    walklist = Vector{Tuple}()
-    for node in range(1, nv(G))
-        nodewalks = all_walks(adjacency_dict, node, k)
-        append!(walklist, nodewalks)
-    end
-    return walklist
-end
-
 
 function parse_commandline(args)
     s = ArgParseSettings()
