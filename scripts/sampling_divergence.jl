@@ -85,7 +85,7 @@ function get_all_truths(G, kvals)
     return true_dist_dict, true_count_dict, total_walks, all_kedge_walks
 end
 
-function graph_and_motifs(er, p, pa, m, kvals)
+function graph_and_motifs(N, er, p, pa, m, kvals)
    if er
         G = gnp_graph(N, p)
     elseif pa
@@ -94,12 +94,12 @@ function graph_and_motifs(er, p, pa, m, kvals)
    return G, get_all_truths(G, kvals)
 end
 
-function run_gpr(er::Bool, p::Float64, pa::Bool, m::Integer,
-                      kvals, methods, num_runs::Integer)
+function run_gpr(N::Integer, er::Bool, p::Float64, pa::Bool, m::Integer,
+                      kvals, methods, walk_interval::Integer, iterations::Integer, num_runs::Integer)
     output = Dict(k=>Dict(method=>Array{Float64}(undef, num_runs, iterations) for method in methods) for k in kvals)
     Threads.@threads for i in range(1, num_runs)
         # Create a new graph for each run 
-        G, (true_dist_dict, true_count_dict, total_walks, all_kedge_walks) = graph_and_motifs(er, p, pa, m, kvals)
+        G, (true_dist_dict, true_count_dict, total_walks, all_kedge_walks) = graph_and_motifs(N, er, p, pa, m, kvals)
         Threads.@threads for k in kvals
             divergences = divergence_by_nodes(G, k, true_count_dict[k], true_dist_dict[k], walk_interval, iterations, all_kedge_walks[k], methods)
             for method in keys(divergences)
@@ -113,13 +113,11 @@ function run_gpr(er::Bool, p::Float64, pa::Bool, m::Integer,
    return output
 end
 
-function run_oneg(er::Bool, p::Float64, pa::Bool, m::Integer,
-                      kvals, methods, num_runs::Integer)
+function run_oneg(N::Integer, er::Bool, p::Float64, pa::Bool, m::Integer,
+                      kvals, methods, walk_interval::Integer, iterations::Integer, num_runs::Integer)
     output = Dict(k=>Dict(method=>Array{Float64}(undef, num_runs, iterations) for method in methods) for k in kvals)
     # Create a single graph
-    G, true_dist_dict, true_count_dict, total_walks, all_kedge_walks = G, true_dist_dict, true_count_dict, total_walks, all_kedge_walks
-end
-    println("WHAT THE FUCK IS HAPPENING")
+    G, (true_dist_dict, true_count_dict, total_walks, all_kedge_walks) = graph_and_motifs(N, er, p, pa, m, kvals)
     # Sample from it many times
     Threads.@threads for i in range(1, num_runs)
         Threads.@threads for k in kvals
@@ -158,6 +156,7 @@ function parse_commandline(args)
 	    help = "ER model."
 	"-p"
 	    arg_type = Float64
+            default = 0.01
 	    help = "ER model param. Ignored for -b."
 	"-w", "--walk_interval"
 	    help = "Number of walks per iteration."
@@ -186,19 +185,16 @@ function main()
 	p = arguments["p"]
 	walk_interval = arguments["walk_interval"]
 	iterations = arguments["iterations"]
-	global runs = arguments["runs"]
+	runs = arguments["runs"]
 	gpr = arguments["gpr"]
 	num_cpus = Threads.nthreads()
 	kvals = [2, 3, 4]
 	methods = ["true", "all", "rw", 1, 50, 100]
 
 	if !gpr
-	    println(er, p, pa, m, kvals, methods, runs)
-	    #output = run_oneg(er, p, pa, m, kvals, methods, runs)
+	    output = run_oneg(N, er, p, pa, m, kvals, methods, walk_interval, iterations, runs)
 	else
-	    #output = run_gpr(er, p, pa, m, kvals, methods, runs)
-            println(er, p, pa, m, kvals, methods, runs)
-
+	    output = run_gpr(N, er, p, pa, m, kvals, methods, walk_interval, iterations, runs)
 	end
 
 
@@ -219,9 +215,9 @@ function main()
 	 
 	output_filename = "../../debruijn-nets/results/motifs/$(model)_N-$(N)_param-$(param)_interval-$(walk_interval)_iters-$(iterations)_runs-$(runs)_kl"
 	if gpr
-	    output_filename = output_filename + "_gpr.csv"
+	    output_filename = output_filename * "_gpr.csv"
 	else
-	    output_filename = output_filename + "_1g.csv"
+	    output_filename = output_filename * "_1g.csv"
 	end
 
 	write_to_file(mean_output, output_filename)
