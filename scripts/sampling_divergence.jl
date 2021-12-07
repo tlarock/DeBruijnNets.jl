@@ -2,8 +2,7 @@ using ArgParse, StatsBase
 include("../src/debruijnnets.jl");
 include("../src/sampling.jl");
 include("../src/motifs.jl");
-include("../src/utils.jl");
-
+include("../src/randomgraphs.jl");
 
 function empty_dict(counts)
     return Dict(m=>0 for m in keys(counts))

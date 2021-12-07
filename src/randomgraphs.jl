@@ -20,14 +20,3 @@ function gnp_graph(N, p)
     G = SimpleWeightedDiGraph(src, dest, weights)
     return G
 end
-
-function get_all_walks(G, k)
-    adjacency_dict = get_adj_dict(G, adjacency_matrix(G))
-    walklist = Vector{Tuple}()
-    for node in range(1, nv(G))
-        nodewalks = all_walks(adjacency_dict, node, k)
-        append!(walklist, nodewalks)
-    end
-    return walklist
-end
-

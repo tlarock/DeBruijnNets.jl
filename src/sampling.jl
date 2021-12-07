@@ -95,25 +95,44 @@ function sample_start_node(nodes, node_probabilities, bias_nodes)
     return start_node
 end
 
+
+"""
+"""
+function filter_nodes(G, k)
+    # Compute path counts from adjacency matrix
+    A = adjacency_matrix(G)
+    A[findall(>(0), A)] .= 1
+    path_counts = sum(A^k, dims=2)
+    # We are only interested in nodes who have k-edge walks
+    nodes = [u for u in range(1, nv(G)) if path_counts[u] > 0]
+    return nodes, A, path_counts
+end
+
+
+function compute_node_probs(nodes, path_counts)
+    node_weights = Vector()
+    for node in nodes
+	push!(node_weights, path_counts[node])
+    end
+    node_probabilities = ProbabilityWeights(node_weights / sum(node_weights))
+    return node_probabilities
+end
+
+
 """
     Sample from the complete DeBruijn graph defined by G.
 """
 function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::Integer,
         walks_per_node::Integer, weight_walks::Bool, bias_nodes::Bool, verbose::Bool=false)
-    # Compute path counts from adjacency matrix
-    A = adjacency_matrix(G)
-    A[findall(>(0), A)] .= 1
+    # Filter nodes based on whether they
+    # originate any k-edge walks
+    nodes, A, path_counts = filter_nodes(G, k)
     adjacency_dict = get_adj_dict(G, A)
-    # dims=2 is row sum (out walks)
+    # dims=2 is row sum (out deg/walks)
     out_degrees = sum(A, dims=2)
-    path_counts = sum(A^k, dims=2)
-    # We are only interested in nodes who have k-edge walks
-    nodes = [u for u in range(1, nv(G)) if path_counts[u] > 0]
-    node_weights = Vector()
-    for node in nodes
-	push!(node_weights, path_counts[node])
-    end
-    node_probabilities = ProbabilityWeights(node_weights / sum(node_weights)) 
+    # Compute weights for nodes
+    node_probabilities = compute_node_probs(nodes, path_counts)
+
     walks = Vector{Tuple}(undef, num_walks)
     walks_by_node = Dict()
     walk_weight_lookup = Dict()

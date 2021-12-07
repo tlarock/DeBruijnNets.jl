@@ -141,3 +141,17 @@ function walks_from_edges(ko, ko_map, fo_map)
     end
     return edges_as_walks, weights
 end
+
+"""
+Return all k-edge walks based on first-order
+graph G.
+"""
+function get_all_walks(G, k)
+    adjacency_dict = get_adj_dict(G, adjacency_matrix(G))
+    walklist = Vector{Tuple}()
+    for node in range(1, nv(G))
+        nodewalks = all_walks(adjacency_dict, node, k)
+        append!(walklist, nodewalks)
+    end
+    return walklist
+end
