@@ -12,19 +12,21 @@ end
 function divergence_by_nodes(G, k, true_counts, true_dist, walk_interval,
                               num_intervals,  all_kwalks, methods)
 
-    nodes, A, path_counts = filter_nodes(G, k)
+    nodes, A, A_bin, path_counts = filter_nodes(G, k)
     node_probabilities = compute_node_probs(nodes, path_counts)
     sampled_counts = Dict(key=>empty_dict(true_counts) for key in methods)
     divergences = Dict(key=>Vector{Float64}(undef, num_intervals) for key in keys(sampled_counts))
     for i in range(1, num_intervals)
         for met in methods
-            if met == "all"
+            if met == "all_walks"
                 walks = uniform_walk_sample(G, k, walk_interval,
                                             -1, true, true)
-	    elseif met == "true"
+	    elseif met == "uniform"
 		walks = sample(all_kwalks, walk_interval)
             elseif met == "rw"
                 walks = random_walks(G, k, walk_interval, nodes, node_probabilities, false, false)
+	    elseif met == "rw-w"
+	        walks = random_walks(G, k, walk_interval, nodes, node_probabilities, false, true)
             else
                 walks = uniform_walk_sample(G, k, walk_interval,
                                             met, true, true)
@@ -189,7 +191,7 @@ function main()
 	gpr = arguments["gpr"]
 	num_cpus = Threads.nthreads()
 	kvals = [2, 3, 4]
-	methods = ["true", "all", "rw", 1, 50, 100]
+	methods = ["uniform", "all_walks", "rw", "rw-w"]
 
 	if !gpr
 	    output = run_oneg(N, er, p, pa, m, kvals, methods, walk_interval, iterations, runs)

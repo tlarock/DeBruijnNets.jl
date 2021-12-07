@@ -101,11 +101,12 @@ end
 function filter_nodes(G, k)
     # Compute path counts from adjacency matrix
     A = adjacency_matrix(G)
-    A[findall(>(0), A)] .= 1
+    A_bin = adjacency_matrix(G)
+    A_bin[findall(>(0), A)] .= 1
     path_counts = sum(A^k, dims=2)
     # We are only interested in nodes who have k-edge walks
     nodes = [u for u in range(1, nv(G)) if path_counts[u] > 0]
-    return nodes, A, path_counts
+    return nodes, A, A_bin, path_counts
 end
 
 
@@ -156,10 +157,10 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
         walks_per_node::Integer, weight_walks::Bool, bias_nodes::Bool, verbose::Bool=false)
     # Filter nodes based on whether they
     # originate any k-edge walks
-    nodes, A, path_counts = filter_nodes(G, k)
+    nodes, A, A_bin, path_counts = filter_nodes(G, k)
     adjacency_dict = get_adj_dict(G, A)
     # dims=2 is row sum (out deg/walks)
-    out_degrees = sum(A, dims=2)
+    out_degrees = sum(A_bin, dims=2)
     # Compute weights for nodes
     node_probabilities = compute_node_probs(nodes, path_counts)
 

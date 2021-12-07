@@ -8,8 +8,12 @@ function random_walks(G, k::Integer, num_walks::Integer, nodes, node_probabiliti
     walks = Vector{Tuple}(undef, num_walks)
     Threads.@threads for i in range(1, num_walks)
         start_node = sample_start_node(nodes, node_probabilities, bias_nodes)
-        walk = Tuple(randomwalk(G, start_node, k+1))
-        while length(walk) < k+1
+        # Start node must have positive out degree
+        while sum(G.weights[start_node,:]) == 0
+            start_node = sample_start_node(nodes, node_probabilities, bias_nodes)
+	end
+        walk = Tuple()
+	while length(walk) < k+1
             if !weighted
                 walk = Tuple(randomwalk(G, start_node, k+1))
             else
@@ -25,8 +29,8 @@ end
 """
 Compute out weight basd edge probabilitis.
 """
-function edge_probabilities(G, node)
-    edge_probs = G.weights[node,:]
+function edge_probabilities(G, node, nbrs)
+    edge_probs = convert(Vector{Float64}, G.weights[node,nbrs])
     edge_probs ./= sum(edge_probs)
     return ProbabilityWeights(edge_probs)
 end
@@ -43,13 +47,17 @@ function weighted_rw(G, start_node, len)
     walk = Vector{Int64}()
     curr_node = start_node
     while length(walk) < len
-        nbrs = outneighbors(G, curr_node)
-        edge_probs = edge_probabilities(G, node)
-        nxt_node = sample(nbrs, edge_probs, 1)
+        nbrs = findall(>(0), G.weights[curr_node,:])
+        edge_probs = edge_probabilities(G, curr_node, nbrs)
+        if length(edge_probs) == 0
+           println("What's up with this??")
+           println("curr_node: $(curr_node), nbrs: $(nbrs), edge_probs: $(edge_probs)")
+        end
+        nxt_node = sample(nbrs, edge_probs, 1)[1]
         tries = 0
         mtries = length(nbrs)*2
         while sum(G.weights[nxt_node,:]) == 0 && tries < mtries
-            nxt_node = sample(nbrs, edge_probs, 1)
+            nxt_node = sample(nbrs, edge_probs, 1)[1]
             tries += 1
         end
         if tries <= mtries
