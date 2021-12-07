@@ -122,14 +122,13 @@ end
 Helper function for uniform walk sampler.
 Mutates walks_by_node.
 """
-function update_rw_sample!(G, start_node, k, walks_per_node, walks_by_node)
+function update_rw_sample!(G, start_node, k, walks_per_node, walks_by_node, path_counts)
     if !haskey(walks_by_node, start_node)
 	curr_walks = random_walks(G, start_node, k, walks_per_node)
 	while curr_walks == nothing
 	    curr_walks = random_walks(G, start_node, k, walks_per_node)
 	end
     	walks_by_node[start_node] = curr_walks
-    end
     else
 	if length(walks_by_node) < path_counts[start_node]
 	    curr_walks = random_walks(G, start_node, k, walks_per_node)
@@ -166,7 +165,7 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
     for w in range(1, num_walks)
 	start_node = sample_start_node(nodes, node_probabilities, bias_nodes)
         if walks_per_node > 0
-	    curr_walks = update_rw_sample(G, start_node, k, walks_per_node, walks_by_node)
+	    curr_walks = update_rw_sample!(G, start_node, k, walks_per_node, walks_by_node, path_counts)
         else
             curr_walks = all_walks(adjacency_dict, start_node, k)
             walks_by_node[start_node] = curr_walks

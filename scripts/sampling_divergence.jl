@@ -57,8 +57,8 @@ function write_to_file(output, output_file)
     return nothing
 end
 
-function get_truth(G, k)
-    adjacency_dict = get_adj_dict(G, adjacency_matrix(G))
+function get_truth(G, adj, k)
+    adjacency_dict = get_adj_dict(G, adj)
     walklist = Vector{Tuple}()
     for node in range(1, nv(G))
         nodewalks = all_walks(adjacency_dict, node, k)
@@ -69,6 +69,72 @@ function get_truth(G, k)
     true_dist ./= sum(true_dist)
     return true_dist, true_counts
 end
+
+
+function get_all_truths(G, kvals)
+    true_dist_dict = Dict()
+    true_count_dict = Dict()
+    all_kedge_walks = Dict()
+    total_walks = Dict()
+    adj = adjacency_matrix(G)
+    for k in kvals
+        true_dist_dict[k], true_count_dict[k] = get_truth(G, adj, k)
+        total_walks[k] = sum(adj^k)
+        all_kedge_walks[k] = get_all_walks(G, k)
+    end
+    return true_dist_dict, true_count_dict, total_walks, all_kedge_walks
+end
+
+function graph_and_motifs(er, p, pa, m, kvals)
+   if er
+        G = gnp_graph(N, p)
+    elseif pa
+        G = pa_graph(N, m)
+   end
+   return G, get_all_truths(G, kvals)
+end
+
+function run_gpr(er::Bool, p::Float64, pa::Bool, m::Integer,
+                      kvals, methods, num_runs::Integer)
+    output = Dict(k=>Dict(method=>Array{Float64}(undef, num_runs, iterations) for method in methods) for k in kvals)
+    Threads.@threads for i in range(1, num_runs)
+        # Create a new graph for each run 
+        G, (true_dist_dict, true_count_dict, total_walks, all_kedge_walks) = graph_and_motifs(er, p, pa, m, kvals)
+        Threads.@threads for k in kvals
+            divergences = divergence_by_nodes(G, k, true_count_dict[k], true_dist_dict[k], walk_interval, iterations, all_kedge_walks[k], methods)
+            for method in keys(divergences)
+                for j in range(1, length(divergences[method]))
+                    output[k][method][i,j] = divergences[method][j]
+                end
+            end
+        end
+        println(i)
+     end
+   return output
+end
+
+function run_oneg(er::Bool, p::Float64, pa::Bool, m::Integer,
+                      kvals, methods, num_runs::Integer)
+    output = Dict(k=>Dict(method=>Array{Float64}(undef, num_runs, iterations) for method in methods) for k in kvals)
+    # Create a single graph
+    G, true_dist_dict, true_count_dict, total_walks, all_kedge_walks = G, true_dist_dict, true_count_dict, total_walks, all_kedge_walks
+end
+    println("WHAT THE FUCK IS HAPPENING")
+    # Sample from it many times
+    Threads.@threads for i in range(1, num_runs)
+        Threads.@threads for k in kvals
+           divergences = divergence_by_nodes(G, k, true_count_dict[k], true_dist_dict[k], walk_interval, iterations, all_kedge_walks[k], methods)
+            for method in keys(divergences)
+                for j in range(1, length(divergences[method]))
+                   output[k][method][i,j] = divergences[method][j]
+                end
+            end
+        end
+        println(i)
+    end
+    return output
+end
+
 
 function parse_commandline(args)
     s = ArgParseSettings()
@@ -109,75 +175,56 @@ end
 return parse_args(args, s)
 end
 
-arguments = parse_commandline(ARGS)
+function main()
+	arguments = parse_commandline(ARGS)
+	println(arguments)
+	k = arguments["k"]
+	N = arguments["num_nodes"]
+	pa = arguments["pa"]
+	m = arguments["m"]
+	er = arguments["er"]
+	p = arguments["p"]
+	walk_interval = arguments["walk_interval"]
+	iterations = arguments["iterations"]
+	global runs = arguments["runs"]
+	gpr = arguments["gpr"]
+	num_cpus = Threads.nthreads()
+	kvals = [2, 3, 4]
+	methods = ["true", "all", "rw", 1, 50, 100]
 
-println(arguments)
-k = arguments["k"]
-N = arguments["num_nodes"]
-pa = arguments["pa"]
-m = arguments["m"]
-er = arguments["er"]
-p = arguments["p"]
-walk_interval = arguments["walk_interval"]
-iterations = arguments["iterations"]
-runs = arguments["runs"]
-gpr = arguments["gpr"]
-if gpr
-    println("NOT IMPLEMENTED.")
-end
-num_cpus = Threads.nthreads()
+	if !gpr
+	    println(er, p, pa, m, kvals, methods, runs)
+	    #output = run_oneg(er, p, pa, m, kvals, methods, runs)
+	else
+	    #output = run_gpr(er, p, pa, m, kvals, methods, runs)
+            println(er, p, pa, m, kvals, methods, runs)
 
-if er
-    G = gnp_graph(N, p)
-elseif pa
-    G = pa_graph(N, m)
-end
+	end
 
-kvals = [2, 3, 4]
-true_dist_dict = Dict()
-true_count_dict = Dict()
-all_kedge_walks = Dict()
-total_walks = Dict()
-adj = adjacency_matrix(G)
-for k in kvals
-    true_dist_dict[k], true_count_dict[k] = get_truth(G, k)
-    total_walks[k] = sum(adj^k)
-    println("Computing all walks for every node.")
-    all_kedge_walks[k] = get_all_walks(G, k)
-    println("Done with computation.")
-    println("Total walks at order k: $(total_walks[k]).")
-end
 
-methods = ["true", "all", "rw", 1, 50, 100]
+	mean_output = Dict(k=>Dict() for k in keys(output))
+	for (k, kdict) in output
+	    for (method, method_arr) in kdict
+		    mean_output[k][method] = mean_and_std(method_arr, 1)
+	    end
+	end
 
-output = Dict(k=>Dict(method=>Array{Float64}(undef, runs, iterations) for method in methods) for k in kvals)
-Threads.@threads for i in range(1, runs)
-    # ToDo: GPR
-    Threads.@threads for k in kvals
-        divergences = divergence_by_nodes(G, k, true_count_dict[k], true_dist_dict[k], walk_interval, iterations, all_kedge_walks[k], methods)
-        for method in keys(divergences)
-            for j in range(1, length(divergences[method]))
-                output[k][method][i,j] = divergences[method][j]
-            end
-         end
-    end
-    println(i)
+	if er
+	    model = "er"
+	    param = p
+	else
+	    model = "pa"
+	    param = m
+	end
+	 
+	output_filename = "../../debruijn-nets/results/motifs/$(model)_N-$(N)_param-$(param)_interval-$(walk_interval)_iters-$(iterations)_runs-$(runs)_kl"
+	if gpr
+	    output_filename = output_filename + "_gpr.csv"
+	else
+	    output_filename = output_filename + "_1g.csv"
+	end
+
+	write_to_file(mean_output, output_filename)
 end
 
-mean_output = Dict(k=>Dict() for k in keys(output))
-for (k, kdict) in output
-    for (method, method_arr) in kdict
-	    mean_output[k][method] = mean_and_std(method_arr, 1)
-    end
-end
-
-println("Done.")
-if er
-    model = "er"
-    param = p
-else
-    model = "pa"
-    param = m
-end   
-output_filename = "../../debruijn-nets/results/motifs/$(model)_N-$(N)_param-$(param)_interval-$(walk_interval)_iters-$(iterations)_runs-$(runs)_kl_1g.csv"
-write_to_file(mean_output, output_filename)
+main()
