@@ -2,6 +2,7 @@ using ArgParse
 include("../src/debruijnnets.jl");
 include("../src/sampling.jl");
 include("../src/motifs.jl")
+include("../src/randomwalks.jl")
 
 """
 Run a line-graph sampling simulation.
@@ -29,22 +30,6 @@ function lgs(fo, k, M, num_samples,  walks_per_node, empirical_motifs)
         end
     end
     return sampled_counts
-end
-
-
-"""
-"""
-function random_walks(G, k::Integer, num_walks::Integer, nodes, node_probabilities, bias_nodes::Bool=false)
-    walks = Vector{Tuple}(undef, num_walks)
-    Threads.@threads for i in range(1, num_walks)
-        start_node = sample_start_node(nodes, node_probabilities, bias_nodes)
-        walk = Tuple(randomwalk(G, start_node, k+1))
-        while length(walk) < k+1
-            walk = Tuple(randomwalk(G, start_node, k+1))
-        end
-        walks[i] = walk
-    end
-    return walks
 end
 
 """

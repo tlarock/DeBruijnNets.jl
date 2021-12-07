@@ -3,14 +3,18 @@ include("../src/debruijnnets.jl");
 include("../src/sampling.jl");
 include("../src/motifs.jl");
 include("../src/randomgraphs.jl");
+include("../src/randomwalks.jl");
 
 function empty_dict(counts)
     return Dict(m=>0 for m in keys(counts))
 end
 
 function divergence_by_nodes(G, k, true_counts, true_dist, walk_interval,
-                              num_intervals,  all_kwalks)
-    sampled_counts = Dict(key=>empty_dict(true_counts) for key in ["true", "all", 1, 50, 100])
+                              num_intervals,  all_kwalks, methods)
+
+    nodes, A, path_counts = filter_nodes(G, k)
+    node_probabilities = compute_node_probs(nodes, path_counts)
+    sampled_counts = Dict(key=>empty_dict(true_counts) for key in methods)
     divergences = Dict(key=>Vector{Float64}(undef, num_intervals) for key in keys(sampled_counts))
     for i in range(1, num_intervals)
         for key in keys(sampled_counts)
@@ -19,6 +23,8 @@ function divergence_by_nodes(G, k, true_counts, true_dist, walk_interval,
                                             -1, true, true)
 	    elseif key == "true"
 		walks = sample(all_kwalks, walk_interval)
+            elseif key == "rw"
+                walks = random_walks(G, k, walk_interval, nodes, node_probabilities, false)
             else
                 walks = uniform_walk_sample(G, k, walk_interval,
                                             key, true, true)
@@ -140,12 +146,13 @@ for k in kvals
     println("Total walks at order k: $(total_walks[k]).")
 end
 
+methods = ["true", "all", "rw", 1, 50, 100]
 
-output = Dict(k=>Dict(method=>Array{Float64}(undef, runs, iterations) for method in ["true", "all", 1, 50, 100]) for k in kvals)
+output = Dict(k=>Dict(method=>Array{Float64}(undef, runs, iterations) for method in methods) for k in kvals)
 Threads.@threads for i in range(1, runs)
     # ToDo: GPR
     Threads.@threads for k in kvals
-        divergences = divergence_by_nodes(G, k, true_count_dict[k], true_dist_dict[k], walk_interval, iterations, all_kedge_walks[k])
+        divergences = divergence_by_nodes(G, k, true_count_dict[k], true_dist_dict[k], walk_interval, iterations, all_kedge_walks[k], methods)
         for method in keys(divergences)
             for j in range(1, length(divergences[method]))
                 output[k][method][i,j] = divergences[method][j]
