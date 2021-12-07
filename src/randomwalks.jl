@@ -12,7 +12,8 @@ function random_walks(G, k::Integer, num_walks::Integer, nodes, node_probabiliti
         while sum(G.weights[start_node,:]) == 0
             start_node = sample_start_node(nodes, node_probabilities, bias_nodes)
 	end
-        walk = Tuple()
+        # Initializ walk to garbage value (always enters loop)
+        walk = [0]
 	while length(walk) < k+1
             if !weighted
                 walk = Tuple(randomwalk(G, start_node, k+1))
