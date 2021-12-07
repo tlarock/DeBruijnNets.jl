@@ -79,13 +79,14 @@ function parse_commandline(args)
         "-N", "--num_nodes"
 	    help = "Number of nodes"
 	    arg_type = Int
-	"-b", "--ba"
+	"--pa"
 	    action = :store_true
 	    help = "Preferential attachment model."
 	"-m"
 	    arg_type = Int
 	    default = 5
-	    help = "BA Model param. Ignored for -e."
+	    help = "Preferential attachment param.
+                      Ignored for -e."
 	"-e", "--er"
 	    action = :store_true
 	    help = "ER model."
@@ -113,10 +114,8 @@ arguments = parse_commandline(ARGS)
 println(arguments)
 k = arguments["k"]
 N = arguments["num_nodes"]
-ba = arguments["ba"]
-if ba
-    println("NOT IMPLEMENTED.")
-end
+pa = arguments["pa"]
+m = arguments["m"]
 er = arguments["er"]
 p = arguments["p"]
 walk_interval = arguments["walk_interval"]
@@ -130,7 +129,10 @@ num_cpus = Threads.nthreads()
 
 if er
     G = gnp_graph(N, p)
+elseif pa
+    G = pa_graph(N, m)
 end
+
 kvals = [2, 3, 4]
 true_dist_dict = Dict()
 true_count_dict = Dict()
@@ -174,7 +176,7 @@ if er
     model = "er"
     param = p
 else
-    model = "ba"
+    model = "pa"
     param = m
 end   
 output_filename = "../../debruijn-nets/results/motifs/$(model)_N-$(N)_param-$(param)_interval-$(walk_interval)_iters-$(iterations)_runs-$(runs)_kl_1g.csv"
