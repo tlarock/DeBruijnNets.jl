@@ -62,6 +62,7 @@ function weighted_rw(G, start_node, len)
         else
             # start over if we get stuck
             walk = Vector{Int64}()
+        curr_node = nxt_node
         end
     end
     return Tuple(walk)
