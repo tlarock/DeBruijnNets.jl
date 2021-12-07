@@ -17,29 +17,29 @@ function divergence_by_nodes(G, k, true_counts, true_dist, walk_interval,
     sampled_counts = Dict(key=>empty_dict(true_counts) for key in methods)
     divergences = Dict(key=>Vector{Float64}(undef, num_intervals) for key in keys(sampled_counts))
     for i in range(1, num_intervals)
-        for key in keys(sampled_counts)
-            if key == "all"
+        for met in methods
+            if met == "all"
                 walks = uniform_walk_sample(G, k, walk_interval,
                                             -1, true, true)
-	    elseif key == "true"
+	    elseif met == "true"
 		walks = sample(all_kwalks, walk_interval)
-            elseif key == "rw"
-                walks = random_walks(G, k, walk_interval, nodes, node_probabilities, false)
+            elseif met == "rw"
+                walks = random_walks(G, k, walk_interval, nodes, node_probabilities, false, false)
             else
                 walks = uniform_walk_sample(G, k, walk_interval,
-                                            key, true, true)
+                                            met, true, true)
             end
 
             curr_counts = count_motifs(walks, ones(length(walks)))
             for (motif, val) in curr_counts
-                sampled_counts[key][motif] = val
+                sampled_counts[met][motif] = val
             end
 
-            sampled_dist = [Float64(sampled_counts[key][motif]) for motif in keys(true_counts)]
+            sampled_dist = [Float64(sampled_counts[met][motif]) for motif in keys(true_counts)]
             sampled_dist .+= 10^-12
             sampled_dist ./= sum(sampled_dist)
             div = kldivergence(true_dist, sampled_dist)
-            divergences[key][i] = div
+            divergences[met][i] = div
         end
     end
     return divergences

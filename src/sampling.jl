@@ -118,6 +118,33 @@ function compute_node_probs(nodes, path_counts)
     return node_probabilities
 end
 
+"""
+Helper function for uniform walk sampler.
+Mutates walks_by_node.
+"""
+function update_rw_sample!(G, start_node, k, walks_per_node, walks_by_node)
+    if !haskey(walks_by_node, start_node)
+	curr_walks = random_walks(G, start_node, k, walks_per_node)
+	while curr_walks == nothing
+	    curr_walks = random_walks(G, start_node, k, walks_per_node)
+	end
+    	walks_by_node[start_node] = curr_walks
+    end
+    else
+	if length(walks_by_node) < path_counts[start_node]
+	    curr_walks = random_walks(G, start_node, k, walks_per_node)
+	    if curr_walks != nothing
+		append!(walks_by_node[start_node], curr_walks)
+	    else
+		curr_walks = walks_by_node[start_node]
+	    end
+	else
+	    curr_walks = walks_by_node[start_node]
+	end
+    end
+    return curr_walks
+end
+
 
 """
     Sample from the complete DeBruijn graph defined by G.
@@ -137,29 +164,9 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
     walks_by_node = Dict()
     walk_weight_lookup = Dict()
     for w in range(1, num_walks)
-	    start_node = sample_start_node(nodes, node_probabilities, bias_nodes)
+	start_node = sample_start_node(nodes, node_probabilities, bias_nodes)
         if walks_per_node > 0
-            if !haskey(walks_by_node, start_node)
-                curr_walks = random_walks(G, start_node, k, walks_per_node)
-                while curr_walks == nothing
-                    curr_walks = random_walks(G, start_node, k, walks_per_node)
-                end
-                if curr_walks == nothing
-                    continue
-                end
-                walks_by_node[start_node] = curr_walks
-            else
-                if length(walks_by_node) < path_counts[start_node]
-                    curr_walks = random_walks(G, start_node, k, walks_per_node)
-                    if curr_walks != nothing
-                        append!(walks_by_node[start_node], curr_walks)
-                    else
-                        curr_walks = walks_by_node[start_node]
-                    end
-                else
-                    curr_walks = walks_by_node[start_node]
-                end
-            end
+	    curr_walks = update_rw_sample(G, start_node, k, walks_per_node, walks_by_node)
         else
             curr_walks = all_walks(adjacency_dict, start_node, k)
             walks_by_node[start_node] = curr_walks
@@ -167,12 +174,12 @@ function uniform_walk_sample(G::SimpleWeightedDiGraph, k::Integer, num_walks::In
        
         if length(curr_walks) > 0 
             # Sample one walk from walks_by_node
-	        walk_probabilities = get_walk_probabilities!(curr_walks, walk_weight_lookup,
+	    walk_probabilities = get_walk_probabilities!(curr_walks, walk_weight_lookup,
                                                      out_degrees, weight_walks)
 
             walk = sample(curr_walks, ProbabilityWeights(walk_probabilities))
             walks[w] = walk
-	    end
+	end
     end
     if verbose
 	println("Computed $(length(walks)) length-$k walks out of $num_walks requested.")
