@@ -34,15 +34,14 @@ end
 
 """
 """
-function random_walks(G, k::Integer, num_walks::Integer, bias_nodes::Bool=false)
+function random_walks(G, k::Integer, num_walks::Integer, nodes, node_probabilities, bias_nodes::Bool=false)
     walks = Vector{Tuple}(undef, num_walks)
-    nodes, A, path_counts = filter_nodes(G, k)
-    node_probabilities = compute_node_probs(nodes, path_counts)
     Threads.@threads for i in range(1, num_walks)
         start_node = sample_start_node(nodes, node_probabilities, bias_nodes)
-        walk = randomwalk(G, start_node, k+1)
+        walk = Tuple(randomwalk(G, start_node, k+1))
         while length(walk) < k+1
-            walk = randomwalk(G, start_node, k+1)
+            walk = Tuple(randomwalk(G, start_node, k+1))
+        end
         walks[i] = walk
     end
     return walks
@@ -52,10 +51,12 @@ end
     Run a random-walk sampling simulation.
 """
 function rw(fo, k::Integer, M::Integer , num_samples::Integer, empirical_motifs, bias_nodes::Bool=false)
+    nodes, A, path_counts = filter_nodes(fo, k)
+    node_probabilities = compute_node_probs(nodes, path_counts)
     # Sample a bunch of times
     sampled_counts = Dict(m=>Dict("frequency"=>empirical_motifs[m], "samples"=>zeros(num_samples)) for m in keys(empirical_motifs))
     Threads.@threads for run in range(1, num_samples)
-        walks = random_walks(G, k, M, bias_nodes)
+        walks = random_walks(fo, k, M, nodes, node_probabilities, bias_nodes)
         # Count motifs
         motifs = count_motifs(walks)
         for (motif, val) in motifs
@@ -128,10 +129,10 @@ empirical_motifs = count_motifs(walks, walk_freqs)
 println(empirical_motifs)
 M = sum(values(empirical_motifs))
 if ensemble == "lg-s"
-    sampled_counts = lgs(G, k, M, num_samples, walks_per_node, empirical_motifs)
+    sampled_counts = lgs(fo, k, M, num_samples, walks_per_node, empirical_motifs)
     output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble)_bn_ww_wpn-$(walks_per_node).csv"
 elseif ensemble == "rw-uw"
-    sampled_counts = rw(G, k, M, num_samples, empirical_motifs)
+    sampled_counts = rw(fo, k, M, num_samples, empirical_motifs)
     output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble)_bn_ww.csv"
 
 end
