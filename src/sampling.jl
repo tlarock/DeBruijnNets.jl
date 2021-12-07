@@ -124,23 +124,27 @@ Mutates walks_by_node.
 """
 function update_rw_sample!(G, start_node, k, walks_per_node, walks_by_node, path_counts)
     if !haskey(walks_by_node, start_node)
+        # Compute the first set of walks from start_node
 	curr_walks = random_walks(G, start_node, k, walks_per_node)
 	while curr_walks == nothing
 	    curr_walks = random_walks(G, start_node, k, walks_per_node)
 	end
     	walks_by_node[start_node] = curr_walks
     else
-	if length(walks_by_node) < path_counts[start_node]
+        # add more walks
+	if length(walks_by_node[start_node]) < path_counts[start_node]
 	    curr_walks = random_walks(G, start_node, k, walks_per_node)
-	    if curr_walks != nothing
-		append!(walks_by_node[start_node], curr_walks)
-	    else
-		curr_walks = walks_by_node[start_node]
-	    end
-	else
-	    curr_walks = walks_by_node[start_node]
-	end
+            while curr_walks == nothing
+                curr_walks = random_walks(G, start_node, k, walks_per_node)
+            end
+            # Only add new walks
+            curr_walks = [w for w in curr_walks if !(w in walks_by_node[start_node])] 
+            if length(curr_walks) > 0
+	    	append!(walks_by_node[start_node], curr_walks)
+            end
+        end
     end
+    curr_walks = walks_by_node[start_node]
     return curr_walks
 end
 
