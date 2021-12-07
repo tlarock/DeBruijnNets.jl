@@ -25,8 +25,6 @@ function divergence_by_nodes(G, k, true_counts, true_dist, walk_interval,
 		walks = sample(all_kwalks, walk_interval)
             elseif met == "rw"
                 walks = random_walks(G, k, walk_interval, nodes, node_probabilities, false, false)
-	    elseif met == "rw-w"
-	        walks = random_walks(G, k, walk_interval, nodes, node_probabilities, false, true)
             else
                 walks = uniform_walk_sample(G, k, walk_interval,
                                             met, true, true)
@@ -191,7 +189,7 @@ function main()
 	gpr = arguments["gpr"]
 	num_cpus = Threads.nthreads()
 	kvals = [2, 3, 4]
-	methods = ["uniform", "all_walks", "rw", "rw-w"]
+	methods = ["uniform", "all_walks", "rw"]
 
 	if !gpr
 	    output = run_oneg(N, er, p, pa, m, kvals, methods, walk_interval, iterations, runs)
