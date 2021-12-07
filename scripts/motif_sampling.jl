@@ -35,13 +35,14 @@ end
 """
     Run a random-walk sampling simulation.
 """
-function rw(fo, k::Integer, M::Integer , num_samples::Integer, empirical_motifs, bias_nodes::Bool=false)
+function rw(fo, k::Integer, M::Integer , num_samples::Integer, empirical_motifs,
+        bias_nodes::Bool=false, weighted::Bool=false)
     nodes, A, path_counts = filter_nodes(fo, k)
     node_probabilities = compute_node_probs(nodes, path_counts)
     # Sample a bunch of times
     sampled_counts = Dict(m=>Dict("frequency"=>empirical_motifs[m], "samples"=>zeros(num_samples)) for m in keys(empirical_motifs))
     Threads.@threads for run in range(1, num_samples)
-        walks = random_walks(fo, k, M, nodes, node_probabilities, bias_nodes)
+        walks = random_walks(fo, k, M, nodes, node_probabilities, bias_nodes, weighted)
         # Count motifs
         motifs = count_motifs(walks)
         for (motif, val) in motifs
@@ -102,7 +103,10 @@ ensemble = arguments["ensemble"]
 num_cpus = Threads.nthreads()
 splitpath = split(input_filepath, '/')
 ngram_filename = splitpath[end]
-
+weighted = false
+if ensemble == "rw-w"
+    weighted = true
+end
 println("k: $k")
 fo, fo_map, ko, ko_map = from_ngram(input_filepath, frequency, k);
 if has_self_loops(fo)
@@ -116,10 +120,9 @@ M = sum(values(empirical_motifs))
 if ensemble == "lg-s"
     sampled_counts = lgs(fo, k, M, num_samples, walks_per_node, empirical_motifs)
     output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble)_bn_ww_wpn-$(walks_per_node).csv"
-elseif ensemble == "rw-uw"
-    sampled_counts = rw(fo, k, M, num_samples, empirical_motifs)
+elseif ensemble == "rw-uw" || ensemble == "rw-w"
+    sampled_counts = rw(fo, k, M, num_samples, empirical_motifs, weighted)
     output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble)_bn_ww.csv"
-
 end
 
 println(sampled_counts)
