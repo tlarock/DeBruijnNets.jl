@@ -50,10 +50,6 @@ function weighted_rw(G, start_node, len)
     while length(walk) < len
         nbrs = findall(>(0), G.weights[curr_node,:])
         edge_probs = edge_probabilities(G, curr_node, nbrs)
-        if length(edge_probs) == 0
-           println("What's up with this??")
-           println("curr_node: $(curr_node), nbrs: $(nbrs), edge_probs: $(edge_probs)")
-        end
         nxt_node = sample(nbrs, edge_probs, 1)[1]
         tries = 0
         mtries = length(nbrs)*2
