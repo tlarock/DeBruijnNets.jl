@@ -79,6 +79,8 @@ function from_ngram(file::String, frequency::Bool, k::Integer)
         end
         remove_selfloops!(walk) 
         for i in range(1, length(walk))
+            if walk[i-1] == walk[i]
+                prinln("Tere is still a self-loop in here... $(walk)")
             if i > 1
                 u = walk[i-1]
                 v = walk[i]
