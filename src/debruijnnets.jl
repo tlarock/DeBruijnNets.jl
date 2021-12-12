@@ -45,8 +45,8 @@ function remove_selfloops!(w)
         if w[i-1] == w[i]
             deleteat!(w, i-1)
             e-=1
-	else
-	    i+=1
+        else
+            i+=1
         end
     end
 end
@@ -79,14 +79,9 @@ function from_ngram(file::String, frequency::Bool, k::Integer)
         end
         remove_selfloops!(walk) 
         for i in range(1, length(walk))
-            if walk[i-1] == walk[i]
-                prinln("Tere is still a self-loop in here... $(walk)")
             if i > 1
                 u = walk[i-1]
                 v = walk[i]
-                if u == v
-		    println("walk: $walk has selfloops...")
-		end
                 fo_idx = add_to_mapping!(fo_map, u, fo_idx)
                 fo_idx = add_to_mapping!(fo_map, v, fo_idx)
                 if haskey(fo_edgelist, (fo_map[u],fo_map[v]))
