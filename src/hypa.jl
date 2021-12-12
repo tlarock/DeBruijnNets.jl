@@ -10,24 +10,27 @@ p-values on every edge.
 function hypa(k::Integer,
         ko::SimpleWeightedDiGraph, ko_map::Dict{Tuple, Integer},
         fo::SimpleWeightedDiGraph, fo_map::Dict{String, Integer})
+    fo_adj = sparse(adjacency_matrix(fo))
+    ko_adj = sparse(adjacency_matrix(ko))
     # Construct Xi
-    Xi = compute_xi(ko, ko_map, fo, fo_map)
-    pvals = compute_pvals(adjacency_matrix(ko), Xi, false) 
-    return pvals
+    Xi = compute_xi(ko_adj, fo_adj, ko_map, fo_map)
+    # Compute pvals
+    pvals = compute_pvals(ko_adj, Xi, false) 
+    return pvals, Xi
 end
 
 """
 Compute p-values
 """
 function compute_pvals(adjacency, Xi, log_p::Bool=false)
-    total_observations = sum(adjacency)
-    total_xi = sum(Xi)
+    total_observations = sum(Int64, adjacency)
+    total_xi = sum(Int64, Xi)
     nonzero_xi = findall(>(0), Xi)
     pvals = spzeros(Xi.m, Xi.n)
     for cidx in nonzero_xi
         observed = adjacency[cidx]
         xi = Xi[cidx]
-        hy  = Hypergeometric(total_observations, total_xi-total_observations, xi)
+        hy = Hypergeometric(total_observations, total_xi-total_observations, xi)
         if log_p
             pvals[cidx] = logcdf(hy, observed)
         else
@@ -62,12 +65,9 @@ FUNCTIONS FOR COMPUTING THE XI MATRIX
 """
 Compute Xi matrix.
 """
-function compute_xi(
-        ko::SimpleWeightedDiGraph, ko_map::Dict{Tuple, Integer},
-        fo::SimpleWeightedDiGraph, fo_map::Dict{String, Integer},
+function compute_xi( ko_adj, fo_adj,
+        ko_map::Dict{Tuple, Integer}, fo_map::Dict{String, Integer},
         tol::Float64=0.0001)
-    fo_adj = adjacency_matrix(fo)
-    ko_adj = adjacency_matrix(ko)
     fo_rev_map = Dict(val=>key for (key,val) in fo_map)
     ko_rev_map = Dict(val=>key for (key,val) in ko_map)
     Xi = spzeros(Float64, nv(ko), nv(ko))
@@ -98,7 +98,7 @@ function compute_xi(
         end
     end
     fit_xi!(Xi, ko, tol)
-    return Xi
+    return trunc.(Int64, Xi)
 end
 
 """
@@ -122,6 +122,7 @@ function fit_xi!(Xi, ko, tol::Float64)
 
         xi_sum = sum(Xi)
         rmse_new = compute_rmse(indegs, outdegs, Xi, xi_sum, m)
+        println("rmse: $rmse_new")
 
         if rmse <= rmse_new || rmse < tol
             break

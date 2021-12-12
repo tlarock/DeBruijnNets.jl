@@ -1,8 +1,45 @@
-using ArgParse
+using ArgParse, Core
 include("../src/debruijnnets.jl");
 include("../src/sampling.jl");
 include("../src/motifs.jl")
 include("../src/randomwalks.jl")
+include("../src/hypa.jl")
+
+"""
+Run a hypa simulation
+"""
+function hypa_sample(fo, ko, ko_map, fo_map, k, num_samples, empirical_motifs)
+    ko_rev_map = Dict(val=>key for (key,val) in ko_map)
+    # Get the adjacency and Xi matrices
+    adjacency = adjacency_matrix(ko)
+    pvals, Xi = hypa(k, ko, ko_map, fo, fo_map)
+    sampled_counts = Dict(m=>Dict("frequency"=>empirical_motifs[m], "samples"=>zeros(num_samples)) for m in keys(empirical_motifs))
+    Threads.@threads for run in range(1, num_samples)
+        # Draw a sample
+        Core.println("Sampling adjacency.")
+        sampled_adj = draw_sample(adjacency, Xi)
+        Core.println("Sampled.")
+        # Transform into walks
+        cidxs = findall(>(0), sampled_adj)
+        walks = Vector{Tuple}(undef, length(cidxs))
+        weights = Vector{Int64}(undef, length(cidxs))
+        widx = 1
+        for cidx in cidxs
+            u, v = Tuple(cidx)
+            walk = (ko_rev_map[u]...,ko_rev_map[v][end])
+            walks[widx] = walk
+            weight = sampled_adj[cidx]
+            weights[widx] = weight
+            widx += 1
+        end
+        # Count motifs
+        motifs = count_motifs(walks, weights)
+        for (motif, val) in motifs
+            sampled_counts[motif]["samples"][run] = val
+        end
+    end
+    return sampled_counts
+end
 
 """
 Run a Biased DeBruijn graph simulation.
@@ -22,7 +59,6 @@ function bdg(fo, ko, ko_map, fo_map, k, M, num_samples, empirical_motifs)
     end
     return sampled_counts
 end
-
 
 """
 Run a line-graph sampling simulation.
@@ -146,6 +182,9 @@ elseif ensemble == "rw-uw" || ensemble == "rw-w"
 elseif ensemble == "bdg"
     sampled_counts = bdg(fo, ko, ko_map, fo_map, k, M, num_samples, empirical_motifs)
     output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble).csv"
+elseif ensemble == "hypa"
+    sampled_counts = hypa_sample(fo, ko, ko_map, fo_map, k, num_samples, empirical_motifs)
+    output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-h.csv"
 end
 
 println(sampled_counts)

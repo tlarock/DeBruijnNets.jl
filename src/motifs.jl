@@ -25,15 +25,15 @@ Project each walk into a motif. If no weights are provided,
 each has weight 1.
 """
 function count_motifs(walks::Vector{Tuple}, weights=ones(length(walks)))
-        motifs = Dict()
-        widx = 1
-        for walk in walks
-            p = alphabet_projection(walk)
-            if !haskey(motifs, p)
-                motifs[p] = 0
-            end
-            motifs[p] += weights[widx]
-            widx += 1
+    motifs = Dict()
+    widx = 1
+    for walk in walks
+        p = alphabet_projection(walk)
+        if !haskey(motifs, p)
+            motifs[p] = 0
         end
-        return motifs
+        motifs[p] += weights[widx]
+        widx += 1
+    end
+    return motifs
 end
