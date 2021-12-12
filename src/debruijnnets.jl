@@ -79,8 +79,6 @@ function from_ngram(file::String, frequency::Bool, k::Integer)
         end
         remove_selfloops!(walk) 
         for i in range(1, length(walk))
-            if walk[i-1] == walk[i]
-                prinln("Tere is still a self-loop in here... $(walk)")
             if i > 1
                 u = walk[i-1]
                 v = walk[i]
@@ -116,6 +114,7 @@ function from_ngram(file::String, frequency::Bool, k::Integer)
     forder = SimpleWeightedDiGraph(fo_src, fo_dest, fo_weights)
     ko_src, ko_dest, ko_weights = vectors_from_edgedict(ko_edgelist)
     korder = SimpleWeightedDiGraph(ko_src, ko_dest, ko_weights)
+    println("Finished reading data, no self-loops found.")
     return forder, fo_map, korder, ko_map
 end
 
