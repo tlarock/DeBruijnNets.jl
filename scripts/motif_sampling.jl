@@ -5,6 +5,26 @@ include("../src/motifs.jl")
 include("../src/randomwalks.jl")
 
 """
+Run a Biased DeBruijn graph simulation.
+"""
+function bdg(fo, ko, ko_map, fo_map, k, M, num_samples, empirical_motifs)
+    # Get all of the walks from the korder graph
+    all_walks, weights = walks_from_edges(ko, ko_map, fo_map)
+    sampled_counts = Dict(m=>Dict("frequency"=>empirical_motifs[m], "samples"=>zeros(num_samples)) for m in keys(empirical_motifs))
+    Threads.@threads for run in range(1, num_samples)
+        # Sample M walks at a time
+        walks = sample(all_walks, M)
+        # Count motifs
+        motifs = count_motifs(walks)
+        for (motif, val) in motifs
+            sampled_counts[motif]["samples"][run] = val
+        end
+    end
+    return sampled_counts
+end
+
+
+"""
 Run a line-graph sampling simulation.
 """
 function lgs(fo, k, M, num_samples,  walks_per_node, empirical_motifs)
@@ -121,8 +141,11 @@ if ensemble == "lg-s"
     sampled_counts = lgs(fo, k, M, num_samples, walks_per_node, empirical_motifs)
     output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble)_bn_ww_wpn-$(walks_per_node).csv"
 elseif ensemble == "rw-uw" || ensemble == "rw-w"
-    sampled_counts = rw(fo, k, M, num_samples, empirical_motifs, weighted)
-    output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble)_bn_ww.csv"
+    sampled_counts = rw(fo, k, M, num_samples, empirical_motifs, false, weighted)
+    output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble).csv"
+elseif ensemble == "bdg"
+    sampled_counts = bdg(fo, ko, ko_map, fo_map, k, M, num_samples, empirical_motifs)
+    output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble).csv"
 end
 
 println(sampled_counts)
