@@ -14,7 +14,8 @@ function hypa_sample(fo, ko, ko_map, fo_map, k, num_samples, empirical_motifs)
     adjacency = adjacency_matrix(ko)
     pvals, Xi = hypa(k, ko, ko_map, fo, fo_map)
     sampled_counts = Dict(m=>Dict("frequency"=>empirical_motifs[m], "samples"=>zeros(num_samples)) for m in keys(empirical_motifs))
-    Threads.@threads for run in range(1, num_samples)
+    # TODO: For some reason this is not thread safe and hangs if I use Threads.@threads
+    for run in range(1, num_samples)
         # Draw a sample
         Core.println("Sampling adjacency.")
         sampled_adj = draw_sample(adjacency, Xi)
