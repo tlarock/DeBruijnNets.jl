@@ -66,5 +66,6 @@ function weighted_rw(G, start_node, len)
         curr_node = nxt_node
         end
     end
+    println("used $tries out of $mtries")
     return Tuple(walk)
 end

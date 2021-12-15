@@ -82,6 +82,9 @@ function from_ngram(file::String, frequency::Bool, k::Integer)
             if i > 1
                 u = walk[i-1]
                 v = walk[i]
+		if u == v
+		    println("Self-loop: $u, $v")
+		end
                 fo_idx = add_to_mapping!(fo_map, u, fo_idx)
                 fo_idx = add_to_mapping!(fo_map, v, fo_idx)
                 if haskey(fo_edgelist, (fo_map[u],fo_map[v]))
@@ -93,6 +96,9 @@ function from_ngram(file::String, frequency::Bool, k::Integer)
             if i < length(walk)-k+1
                 u = Tuple(walk[i:i+k-1])
                 v = Tuple(walk[i+1:i+k])
+		if u == v
+		    println("Self-loop: $u, $v")
+		end
                 ko_idx = add_to_mapping!(ko_map, u, ko_idx)
                 ko_idx = add_to_mapping!(ko_map, v, ko_idx)
 
