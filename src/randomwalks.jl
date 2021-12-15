@@ -57,6 +57,7 @@ function weighted_rw(G, start_node, len)
             nxt_node = sample(nbrs, edge_probs, 1)[1]
             tries += 1
         end
+
         if tries <= mtries
             push!(walk, nxt_node)
         else
