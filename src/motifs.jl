@@ -16,11 +16,6 @@ function alphabet_projection(walk::Tuple)
         end
         push!(projected, map[w])
     end
-    for i in range(2, length(projected))
-        if projected[i-1] == projected[i]
-            println("self loop in motif? $walk, $projected")
-        end
-    end
     return projected
 end
 
