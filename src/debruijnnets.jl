@@ -146,6 +146,52 @@ function walks_from_edges(ko, ko_map, fo_map)
 end
 
 """
+Construct a graph from input walks.
+
+NOTE: Expects nodes to be integers.
+"""
+function from_walks(walks, k, fo_map, ko_map)
+    fo_edgelist = Dict{Tuple, Integer}()
+    ko_edgelist = Dict{Tuple, Integer}()
+    rev_fo_map = Dict(val=>key for (key,val) in fo_map)
+    new_konode_idx = length(ko_map)+1
+    new_ko_map = Dict(Tuple([String(u) for u in key])=>val for (key,val) in ko_map)
+    for w in walks
+        for i in range(2, length(w))
+            edge = Tuple([w[i-1], w[i]])
+            if !haskey(fo_edgelist, edge)
+                fo_edgelist[edge] = 0
+            fo_edgelist[edge] += 1
+            end
+        end
+
+        for i in range(1, length(w)-k)
+            mapped = Tuple([String(rev_fo_map[u]) for u in w[i:i+k]])
+            u = Tuple(mapped[i:i+k-1])
+            v = Tuple(mapped[i+1:i+k])
+            if !haskey(new_ko_map, u)
+                new_ko_map[u] = new_konode_idx
+                new_konode_idx += 1
+            end
+            if !haskey(new_ko_map, v)
+                new_ko_map[v] = new_konode_idx
+                new_konode_idx += 1
+            end
+            edge = Tuple([new_ko_map[u],new_ko_map[v]])
+            if !haskey(ko_edgelist, edge)
+               ko_edgelist[edge] = 0
+            end
+            ko_edgelist[edge] += 1
+        end
+    end
+    fo_src, fo_dest, fo_weights = vectors_from_edgedict(fo_edgelist)
+    forder = SimpleWeightedDiGraph(fo_src, fo_dest, fo_weights)
+    ko_src, ko_dest, ko_weights = vectors_from_edgedict(ko_edgelist)
+    korder = SimpleWeightedDiGraph(ko_src, ko_dest, ko_weights)
+    return forder, korder, new_ko_map
+end
+
+"""
 Return all k-edge walks based on first-order
 graph G.
 """
