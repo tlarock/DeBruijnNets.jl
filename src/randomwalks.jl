@@ -56,16 +56,17 @@ function weighted_rw(G, start_node, len)
         while sum(G.weights[nxt_node,:]) == 0 && tries < mtries
             nxt_node = sample(nbrs, edge_probs, 1)[1]
             tries += 1
+
         end
 
         if tries <= mtries
             push!(walk, nxt_node)
         else
             # start over if we get stuck
+    	    println("used $tries out of $mtries")
             walk = Vector{Int64}()
         curr_node = nxt_node
         end
     end
-    println("used $tries out of $mtries")
     return Tuple(walk)
 end
