@@ -94,7 +94,7 @@ end
 """
 function rw(fo, k::Integer, M::Integer , num_samples::Integer, empirical_motifs,
         bias_nodes::Bool=false, weighted::Bool=false)
-    nodes, A, path_counts = filter_nodes(fo, k)
+    nodes, A, A_bin, path_counts = filter_nodes(fo, k)
     node_probabilities = compute_node_probs(nodes, path_counts)
     # Sample a bunch of times
     sampled_counts = Dict(m=>Dict("frequency"=>empirical_motifs[m], "samples"=>zeros(num_samples)) for m in keys(empirical_motifs))

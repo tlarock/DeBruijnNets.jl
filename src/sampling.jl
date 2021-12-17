@@ -106,6 +106,7 @@ function filter_nodes(G, k)
     path_counts = sum(A^k, dims=2)
     # We are only interested in nodes who have k-edge walks
     nodes = [u for u in range(1, nv(G)) if path_counts[u] > 0]
+    println("Total nodes: $(nv(G)) nodes with k-edge walks $(length(nodes))")
     return nodes, A, A_bin, path_counts
 end
 
