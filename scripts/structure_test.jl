@@ -22,10 +22,15 @@ end
 """
 Run a line-graph sampling simulation.
 """
-function sample_properties(input_file, k, walk_interval, num_intervals, num_samples, output_file)
+function sample_properties(input_file, k, frequency, walk_interval, num_intervals, num_samples, output_file)
+    println("Reading graph.")
     fo, fo_map, ko, ko_map = from_ngram(input_file, frequency, k)
+    println("Done.")
     walk_edges, weights = walks_from_edges(ko, ko_map, fo_map)
+    walk_edges = Set{Tuple}(walk_edges)
+    println("Computing all k-edge walks.")
     all_kedge_walks = get_all_walks(fo, k)
+    println("Done.")
     ko_rev_map = Dict(val=>key for (key, val) in ko_map)
     observed_sampled = zeros(Int64, num_samples, num_intervals)
     unobserved_sampled = zeros(Int64, num_samples, num_intervals)
@@ -64,6 +69,7 @@ function sample_properties(input_file, k, walk_interval, num_intervals, num_samp
         end
     end
 end
+
 function parse_commandline(args)
     s = ArgParseSettings()
     @add_arg_table s begin
@@ -88,21 +94,23 @@ function parse_commandline(args)
 return parse_args(args, s)
 end
 
-arguments = parse_commandline(ARGS)
+function main()
+    arguments = parse_commandline(ARGS)
 
-println(arguments)
-input_filepath = arguments["file"]
-println(input_filepath)
-frequency = arguments["frequency"]
-println(frequency)
-k = arguments["k"]
-runs = arguments["runs"]
-walk_interval = arguments["walk_interval"]
-num_intervals = arguments["iterations"]
-num_cpus = Threads.nthreads()
-splitpath = split(input_filepath, '/')
-ngram_filename = splitpath[end]
-println("k: $k")
-println(runs)
-output_file = "../../debruijn-nets/results/motifs/$(ngram_filename)_samplestats.csv"
-sample_properties(input_filepath, k, walk_interval, num_intervals, runs, output_file)
+    println(arguments)
+    input_filepath = arguments["file"]
+    println(input_filepath)
+    frequency = arguments["frequency"]
+    println(frequency)
+    k = arguments["k"]
+    runs = arguments["runs"]
+    walk_interval = arguments["walk_interval"]
+    num_intervals = arguments["iterations"]
+    num_cpus = Threads.nthreads()
+    splitpath = split(input_filepath, '/')
+    ngram_filename = splitpath[end]
+    println("k: $k")
+    println(runs)
+    output_file = "../../debruijn-nets/results/motifs/$(ngram_filename)_samplestats.csv"
+    sample_properties(input_filepath, k, frequency, walk_interval, num_intervals, runs, output_file)
+end
