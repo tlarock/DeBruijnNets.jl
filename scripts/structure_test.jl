@@ -45,8 +45,7 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
         for i in range(1, num_intervals)
             println("i: $i, num walks: $(i*walk_interval)")
             # Construct a kth-order graph from these walks
-            fo_s, ko_s, new_ko_map = from_walks(sampled_walks, k, fo_map, ko_map)
-            new_rev_ko_map = Dict{Int64, Tuple{Vararg{String}}}(val=>key for (key,val) in new_ko_map)
+            fo_s, ko_s = from_walks!(sampled_walks, k, fo_map, ko_map)
             # Get the set of kth order nodes
             num_observed, num_unobserved = compare_nodes(sampled_walks, walk_edges_set)
             observed_sampled[run,i] = num_observed / ne(ko)
