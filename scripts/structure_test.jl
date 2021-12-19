@@ -39,7 +39,7 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
     unobserved_sampled = zeros(Float64, num_samples, num_intervals)
     missing_nodes = zeros(Float64, num_samples, num_intervals)
     missing_edges = zeros(Float64, num_samples, num_intervals)
-    for run in range(1, num_samples)
+    Threads.@threads for run in range(1, num_samples)
         println("Run: $run")
         sampled_walks = sample(all_kedge_walks, walk_interval)
         for i in range(1, num_intervals)
