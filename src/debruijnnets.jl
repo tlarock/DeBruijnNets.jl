@@ -149,13 +149,13 @@ end
 Construct a graph from input walks.
 
 NOTE: Expects nodes to be integers.
+NOTE: Modifies ko_map
 """
-function from_walks(walks::Vector{Tuple}, k::Int64, fo_map::Dict{String, Integer}, ko_map::Dict{Tuple, Integer})
+function from_walks!(walks::Vector{Tuple}, k::Int64, fo_map::Dict{String, Integer}, ko_map::Dict{Tuple, Integer})
     fo_edgelist = Dict{Tuple, Integer}()
     ko_edgelist = Dict{Tuple, Integer}()
     rev_fo_map = Dict{Int64, String}(val=>key for (key,val) in fo_map)
     new_konode_idx = length(ko_map)+1
-    new_ko_map = Dict{Tuple{Vararg{String}}, Int64}(Tuple([String(u) for u in key])=>val for (key,val) in ko_map)
     for w in walks
         for i in range(2, length(w))
             edge = Tuple([w[i-1], w[i]])
@@ -169,15 +169,15 @@ function from_walks(walks::Vector{Tuple}, k::Int64, fo_map::Dict{String, Integer
             mapped = Tuple([String(rev_fo_map[u]) for u in w[i:i+k]])
             u = Tuple(mapped[i:i+k-1])
             v = Tuple(mapped[i+1:i+k])
-            if !haskey(new_ko_map, u)
-                new_ko_map[u] = new_konode_idx
+            if !haskey(ko_map, u)
+                ko_map[u] = new_konode_idx
                 new_konode_idx += 1
             end
-            if !haskey(new_ko_map, v)
-                new_ko_map[v] = new_konode_idx
+            if !haskey(ko_map, v)
+                ko_map[v] = new_konode_idx
                 new_konode_idx += 1
             end
-            edge = Tuple([new_ko_map[u],new_ko_map[v]])
+            edge = Tuple([ko_map[u],ko_map[v]])
             if !haskey(ko_edgelist, edge)
                ko_edgelist[edge] = 0
             end
@@ -188,7 +188,7 @@ function from_walks(walks::Vector{Tuple}, k::Int64, fo_map::Dict{String, Integer
     forder = SimpleWeightedDiGraph(fo_src, fo_dest, fo_weights)
     ko_src, ko_dest, ko_weights = vectors_from_edgedict(ko_edgelist)
     korder = SimpleWeightedDiGraph(ko_src, ko_dest, ko_weights)
-    return forder, korder, new_ko_map
+    return forder, korder
 end
 
 """
