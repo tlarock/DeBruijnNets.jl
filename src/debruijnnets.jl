@@ -204,3 +204,23 @@ function get_all_walks(G, k)
     end
     return walklist
 end
+
+"""
+Return all k-edge walks based on first-order
+graph G and also return all k-order nodes.
+"""
+function get_all_walks_with_nodes(G, k)
+    adjacency_dict = get_adj_dict(G, adjacency_matrix(G))
+    walklist = Vector{Tuple}()
+    nodes = Set{Tuple}()
+    for node in range(1, nv(G))
+        nodewalks = all_walks(adjacency_dict, node, k)
+        append!(walklist, nodewalks)
+        for walk in nodewalks
+            u = walk[1:end-1]
+            v = walk[1:end]
+            nodes = union(nodes, Set{Tuple}([u,v]))
+        end
+    end
+    return walklist, nodes
+end

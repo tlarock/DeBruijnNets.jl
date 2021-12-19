@@ -29,13 +29,14 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
     walk_edges, weights = walks_from_edges(ko, ko_map, fo_map)
     walk_edges_set = Set{Tuple}(walk_edges)
     println("Computing all k-edge walks.")
-    all_kedge_walks = get_all_walks(fo, k)
+    all_kedge_walks, nodes = get_all_walks_with_nodes(fo, k)
+    total_korder_nodes = length(nodes)
     println("Done.")
     ko_rev_map = Dict{Int64, Tuple{Vararg{String}}}(val=>key for (key, val) in ko_map)
-    observed_sampled = zeros(Int64, num_samples, num_intervals)
-    unobserved_sampled = zeros(Int64, num_samples, num_intervals)
-    missing_nodes = zeros(Int64, num_samples, num_intervals)
-    missing_edges = zeros(Int64, num_samples, num_intervals)
+    observed_sampled = zeros(Float64, num_samples, num_intervals)
+    unobserved_sampled = zeros(Float64, num_samples, num_intervals)
+    missing_nodes = zeros(Float64, num_samples, num_intervals)
+    missing_edges = zeros(Float64, num_samples, num_intervals)
     for run in range(1, num_samples)
         println("Run: $run")
         sampled_walks = sample(all_kedge_walks, walk_interval)
@@ -46,10 +47,10 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
             new_rev_ko_map = Dict{Int64, Tuple{Vararg{String}}}(val=>key for (key,val) in new_ko_map)
             # Get the set of kth order nodes
             num_observed, num_unobserved = compare_nodes(sampled_walks, walk_edges_set)
-            observed_sampled[run,i] = num_observed
-            unobserved_sampled[run,i] = num_unobserved
-            missing_nodes[run,i] = nv(fo)-nv(fo_s)
-            missing_edges[run,i] = ne(fo)-ne(fo_s)
+            observed_sampled[run,i] = num_observed / ne(ko)
+            unobserved_sampled[run,i] = num_unobserved / total_korder_nodes
+            missing_nodes[run,i] = nv(fo_s) / nv(fo)
+            missing_edges[run,i] = ne(fo_s) / ne(fo)
             append!(sampled_walks, sample(all_kedge_walks, walk_interval))
         end
     end
