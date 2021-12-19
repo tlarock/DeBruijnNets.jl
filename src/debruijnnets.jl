@@ -218,8 +218,8 @@ function get_all_walks_with_nodes(G, k)
         append!(walklist, nodewalks)
         for walk in nodewalks
             u = walk[1:end-1]
-            v = walk[1:end]
-            nodes = union(nodes, Set{Tuple}([u,v]))
+            v = walk[2:end]
+            union!(nodes, Set{Tuple}([u,v]))
         end
     end
     return walklist, nodes
