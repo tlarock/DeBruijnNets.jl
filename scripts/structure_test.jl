@@ -114,3 +114,5 @@ function main()
     output_file = "../../debruijn-nets/results/motifs/$(ngram_filename)_samplestats.csv"
     sample_properties(input_filepath, k, frequency, walk_interval, num_intervals, runs, output_file)
 end
+
+main()
