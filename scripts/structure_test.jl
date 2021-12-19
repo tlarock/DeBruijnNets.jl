@@ -5,8 +5,7 @@ include("../src/motifs.jl")
 include("../src/randomwalks.jl")
 include("../src/hypa.jl")
 
-function compare_nodes(walks, ko, ko_map, fo_map)
-    walk_edges, weights = walks_from_edges(ko, ko_map, fo_map)
+function compare_nodes(walks, walk_edges)
     observed = 0
     unobserved = 0
     for w in walks
@@ -25,13 +24,13 @@ Run a line-graph sampling simulation.
 """
 function sample_properties(input_file, k, walk_interval, num_intervals, num_samples, output_file)
     fo, fo_map, ko, ko_map = from_ngram(input_file, frequency, k)
+    walk_edges, weights = walks_from_edges(ko, ko_map, fo_map)
     all_kedge_walks = get_all_walks(fo, k)
     ko_rev_map = Dict(val=>key for (key, val) in ko_map)
     observed_sampled = zeros(Int64, num_samples, num_intervals)
     unobserved_sampled = zeros(Int64, num_samples, num_intervals)
     missing_nodes = zeros(Int64, num_samples, num_intervals)
     missing_edges = zeros(Int64, num_samples, num_intervals)
-
     for run in range(1, num_samples)
         println("Run: $run")
         sampled_walks = sample(all_kedge_walks, walk_interval)
@@ -41,7 +40,7 @@ function sample_properties(input_file, k, walk_interval, num_intervals, num_samp
             fo_s, ko_s, new_ko_map = from_walks(sampled_walks, k, fo_map, ko_map)
             new_rev_ko_map = Dict(val=>key for (key,val) in new_ko_map)
             # Get the set of kth order nodes
-            num_observed, num_unobserved = compare_nodes(sampled_walks, ko, new_ko_map, fo_map)
+            num_observed, num_unobserved = compare_nodes(sampled_walks, walk_edges)
             observed_sampled[run,i] = num_observed
             unobserved_sampled[run,i] = num_unobserved
             missing_nodes[run,i] = nv(fo)-nv(fo_s)
