@@ -113,7 +113,7 @@ function main()
     ngram_filename = splitpath[end]
     println("k: $k")
     println(runs)
-    output_file = "../../debruijn-nets/results/motifs/$(ngram_filename)_samplestats.csv"
+    output_file = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-{k}_samplestats.csv"
     sample_properties(input_filepath, k, frequency, walk_interval, num_intervals, runs, output_file)
 end
 
