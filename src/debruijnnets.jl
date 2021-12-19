@@ -153,7 +153,7 @@ NOTE: Expects nodes to be integers.
 function from_walks(walks::Vector{Tuple}, k::Int64, fo_map::Dict{String, Integer}, ko_map::Dict{Tuple, Integer})
     fo_edgelist = Dict{Tuple, Integer}()
     ko_edgelist = Dict{Tuple, Integer}()
-    rev_fo_map = Dict(val=>key for (key,val) in fo_map)
+    rev_fo_map = Dict{Int64, String}(val=>key for (key,val) in fo_map)
     new_konode_idx = length(ko_map)+1
     new_ko_map = Dict{Tuple{Vararg{String}}, Int64}(Tuple([String(u) for u in key])=>val for (key,val) in ko_map)
     for w in walks
@@ -203,4 +203,24 @@ function get_all_walks(G, k)
         append!(walklist, nodewalks)
     end
     return walklist
+end
+
+"""
+Return all k-edge walks based on first-order
+graph G and also return all k-order nodes.
+"""
+function get_all_walks_with_nodes(G, k)
+    adjacency_dict = get_adj_dict(G, adjacency_matrix(G))
+    walklist = Vector{Tuple}()
+    nodes = Set{Tuple}()
+    for node in range(1, nv(G))
+        nodewalks = all_walks(adjacency_dict, node, k)
+        append!(walklist, nodewalks)
+        for walk in nodewalks
+            u = walk[1:end-1]
+            v = walk[1:end]
+            nodes = union(nodes, Set{Tuple}([u,v]))
+        end
+    end
+    return walklist, nodes
 end

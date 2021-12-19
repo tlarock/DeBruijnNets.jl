@@ -27,15 +27,16 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
     fo, fo_map, ko, ko_map = from_ngram(input_file, frequency, k)
     println("Done.")
     walk_edges, weights = walks_from_edges(ko, ko_map, fo_map)
-    walk_edges = Set{Tuple}(walk_edges)
+    walk_edges_set = Set{Tuple}(walk_edges)
     println("Computing all k-edge walks.")
-    all_kedge_walks = get_all_walks(fo, k)
+    all_kedge_walks, nodes = get_all_walks_with_nodes(fo, k)
+    total_korder_nodes = length(nodes)
     println("Done.")
-    ko_rev_map = Dict(val=>key for (key, val) in ko_map)
-    observed_sampled = zeros(Int64, num_samples, num_intervals)
-    unobserved_sampled = zeros(Int64, num_samples, num_intervals)
-    missing_nodes = zeros(Int64, num_samples, num_intervals)
-    missing_edges = zeros(Int64, num_samples, num_intervals)
+    ko_rev_map = Dict{Int64, Tuple{Vararg{String}}}(val=>key for (key, val) in ko_map)
+    observed_sampled = zeros(Float64, num_samples, num_intervals)
+    unobserved_sampled = zeros(Float64, num_samples, num_intervals)
+    missing_nodes = zeros(Float64, num_samples, num_intervals)
+    missing_edges = zeros(Float64, num_samples, num_intervals)
     for run in range(1, num_samples)
         println("Run: $run")
         sampled_walks = sample(all_kedge_walks, walk_interval)
@@ -43,27 +44,27 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
             println("i: $i, num walks: $(i*walk_interval)")
             # Construct a kth-order graph from these walks
             fo_s, ko_s, new_ko_map = from_walks(sampled_walks, k, fo_map, ko_map)
-            new_rev_ko_map = Dict(val=>key for (key,val) in new_ko_map)
+            new_rev_ko_map = Dict{Int64, Tuple{Vararg{String}}}(val=>key for (key,val) in new_ko_map)
             # Get the set of kth order nodes
-            num_observed, num_unobserved = compare_nodes(sampled_walks, walk_edges)
-            observed_sampled[run,i] = num_observed
-            unobserved_sampled[run,i] = num_unobserved
-            missing_nodes[run,i] = nv(fo)-nv(fo_s)
-            missing_edges[run,i] = ne(fo)-ne(fo_s)
+            num_observed, num_unobserved = compare_nodes(sampled_walks, walk_edges_set)
+            observed_sampled[run,i] = num_observed / ne(ko)
+            unobserved_sampled[run,i] = num_unobserved / total_korder_nodes
+            missing_nodes[run,i] = nv(fo_s) / nv(fo)
+            missing_edges[run,i] = ne(fo_s) / ne(fo)
             append!(sampled_walks, sample(all_kedge_walks, walk_interval))
         end
     end
 
     x = [walk_interval*i for i in range(1, num_intervals)]
-    observed_sampled = mean_and_std(observed_sampled, 1)
-    unobserved_sampled = mean_and_std(unobserved_sampled, 1)
-    missing_nodes = mean_and_std(missing_nodes, 1)
-    missing_edges = mean_and_std(missing_edges, 1)
+    observed_sampled_stats = mean_and_std(observed_sampled, 1)
+    unobserved_sampled_stats = mean_and_std(unobserved_sampled, 1)
+    missing_nodes_stats = mean_and_std(missing_nodes, 1)
+    missing_edges_stats = mean_and_std(missing_edges, 1)
 
     open(output_file, "w") do file
         out_str = "$(join(x, ','))\n" 
         write(file, out_str)
-        for arr in [observed_sampled, unobserved_sampled, missing_nodes, missing_edges]
+        for arr in [observed_sampled_stats, unobserved_sampled_stats, missing_nodes_stats, missing_edges_stats]
             out_str = "$(join(arr[1], ','))|$(join(arr[2], ','))\n" 
             write(file, out_str)
         end
