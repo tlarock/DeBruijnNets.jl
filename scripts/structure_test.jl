@@ -12,6 +12,9 @@ function compare_nodes(walks, walk_edges)
         if w in walk_edges
             observed += 1
         else
+            if length(w) != length(first(walk_edges))
+                println(w)
+            end
             unobserved += 1
         end
     end
@@ -20,7 +23,7 @@ end
 
 
 """
-Run a line-graph sampling simulation.
+
 """
 function sample_properties(input_file, k, frequency, walk_interval, num_intervals, num_samples, output_file)
     println("Reading graph.")
@@ -48,7 +51,7 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
             println("i: $i, num walks: $(i*walk_interval)")
             # Construct a kth-order graph from these walks
             fo_s, ko_s = from_walks!(sampled_walks, k, rev_fo_map, ko_map)
-            # Get the set of kth order nodes
+            # Compare sampled walks to observed walks
             num_observed, num_unobserved = compare_nodes(sampled_set, walk_edges_set)
             observed_sampled[run,i] = num_observed / ne(ko)
             unobserved_sampled[run,i] = num_unobserved / total_korder_nodes
@@ -65,7 +68,7 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
     missing_nodes_stats = mean_and_std(missing_nodes, 1)
     missing_edges_stats = mean_and_std(missing_edges, 1)
 
-    open(output_file, "w") do file
+    open(output_file, write=true) do file
         out_str = "$(join(x, ','))\n" 
         write(file, out_str)
         for arr in [observed_sampled_stats, unobserved_sampled_stats, missing_nodes_stats, missing_edges_stats]
@@ -101,7 +104,6 @@ end
 
 function main()
     arguments = parse_commandline(ARGS)
-
     println(arguments)
     input_filepath = arguments["file"]
     println(input_filepath)
@@ -112,7 +114,6 @@ function main()
     walk_interval = arguments["walk_interval"]
     num_intervals = arguments["iterations"]
     num_cpus = Threads.nthreads()
-    println(input_filepath)
     splitpath = split(input_filepath, '/')
     ngram_filename = splitpath[end]
     println("k: $k")
