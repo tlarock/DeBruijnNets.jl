@@ -109,6 +109,7 @@ function main()
     walk_interval = arguments["walk_interval"]
     num_intervals = arguments["iterations"]
     num_cpus = Threads.nthreads()
+    println(input_filepath)
     splitpath = split(input_filepath, '/')
     ngram_filename = splitpath[end]
     println("k: $k")
@@ -117,4 +118,4 @@ function main()
     sample_properties(input_filepath, k, frequency, walk_interval, num_intervals, runs, output_file)
 end
 
-main()
+#main()

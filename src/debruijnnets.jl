@@ -126,21 +126,18 @@ Convert edges of ko to walks of length k. Use edge
 weights in ko as weights for walks.
 """
 function walks_from_edges(ko, ko_map, fo_map)
-    edges_as_walks = Vector{Tuple}()
     A = adjacency_matrix(ko)
+    cids = Tuple{CartesianIndex}(findall(>(0), A))
+    edges_as_walks = Vector{Tuple}(undef, length(cids))
     ko_rev_map = Dict(value => key for (key, value) in ko_map)
-    weights = Vector{Int64}()
-    for node in range(1, nv(ko))
-        ko_u = ko_rev_map[node]
-        adjacency = findall(>(0), A[node,:])
-        prefix = [fo_map[u] for u in ko_u]
-        for ne in adjacency
-            ko_v = ko_rev_map[ne]
-            walk = Vector(prefix)
-            push!(walk, fo_map[ko_v[end]])
-            push!(edges_as_walks, Tuple(u for u in walk))
-            push!(weights, A[node, ne])
-        end
+    weights = Vector{Int64}(undef, ne(ko))
+    Threads.@threads for cidx in cids
+        id = Threads.threadid()
+        u, v = Tuple(cidx)
+        ko_u = ko_rev_map[u]
+        ko_v = ko_rev_map[v]
+        edges_as_walks[id] = Tuple{Vararg{AbstractString}}([ko_u...,ko_v[end]])
+        weights[id] = A[u, v]
     end
     return edges_as_walks, weights
 end
