@@ -38,7 +38,6 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
     all_kedge_walks, nodes = get_all_walks_with_nodes(fo, k)
     total_korder_nodes = length(nodes)
     println("Done.")
-    ko_rev_map = Dict{Int64, Tuple{Vararg{String}}}(val=>key for (key, val) in ko_map)
     observed_sampled = zeros(Float64, num_samples, num_intervals)
     unobserved_sampled = zeros(Float64, num_samples, num_intervals)
     missing_nodes = zeros(Float64, num_samples, num_intervals)
@@ -50,7 +49,7 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
         for i in range(1, num_intervals)
             println("i: $i, num walks: $(i*walk_interval)")
             # Construct a kth-order graph from these walks
-            fo_s, ko_s = from_walks!(sampled_walks, k, rev_fo_map, ko_map)
+            fo_s, ko_s, ko_map = from_walks(sampled_walks, k, rev_fo_map, ko_map)
             # Compare sampled walks to observed walks
             num_observed, num_unobserved = compare_nodes(sampled_set, walk_edges_set)
             observed_sampled[run,i] = num_observed / ne(ko)

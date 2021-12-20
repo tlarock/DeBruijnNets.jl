@@ -147,9 +147,8 @@ end
 Construct a graph from input walks.
 
 NOTE: Expects nodes to be integers.
-NOTE: Modifies ko_map
 """
-function from_walks!(walks::Vector{Tuple}, k::Int64, rev_fo_map::Dict{Integer, String}, ko_map::Dict{Tuple, Integer})
+function from_walks(walks::Vector{Tuple}, k::Int64, rev_fo_map::Dict{Integer, String}, ko_map::Dict{Tuple, Integer})
     fo_edgelist = Dict{Tuple, Integer}()
     ko_edgelist = Dict{Tuple, Integer}()
     new_konode_idx = length(ko_map)+1
@@ -185,7 +184,7 @@ function from_walks!(walks::Vector{Tuple}, k::Int64, rev_fo_map::Dict{Integer, S
     forder = SimpleWeightedDiGraph(fo_src, fo_dest, fo_weights)
     ko_src, ko_dest, ko_weights = vectors_from_edgedict(ko_edgelist)
     korder = SimpleWeightedDiGraph(ko_src, ko_dest, ko_weights)
-    return forder, korder
+    return forder, korder, ko_map
 end
 
 """
