@@ -149,10 +149,9 @@ Construct a graph from input walks.
 NOTE: Expects nodes to be integers.
 NOTE: Modifies ko_map
 """
-function from_walks!(walks::Vector{Tuple}, k::Int64, fo_map::Dict{String, Integer}, ko_map::Dict{Tuple, Integer})
+function from_walks!(walks::Vector{Tuple}, k::Int64, rev_fo_map::Dict{Integer, String}, ko_map::Dict{Tuple, Integer})
     fo_edgelist = Dict{Tuple, Integer}()
     ko_edgelist = Dict{Tuple, Integer}()
-    rev_fo_map = Dict{Int64, String}(val=>key for (key,val) in fo_map)
     new_konode_idx = length(ko_map)+1
     for w in walks
         for i in range(2, length(w))
@@ -164,9 +163,9 @@ function from_walks!(walks::Vector{Tuple}, k::Int64, fo_map::Dict{String, Intege
         end
 
         for i in range(1, length(w)-k)
-            mapped = Tuple([String(rev_fo_map[u]) for u in w[i:i+k]])
-            u = Tuple(mapped[i:i+k-1])
-            v = Tuple(mapped[i+1:i+k])
+            mapped = Tuple{Vararg{String}}([String(rev_fo_map[u]) for u in w[i:i+k]])
+            u = Tuple{Vararg{String}}(mapped[i:i+k-1])
+            v = Tuple{Vararg{String}}(mapped[i+1:i+k])
             if !haskey(ko_map, u)
                 ko_map[u] = new_konode_idx
                 new_konode_idx += 1
@@ -175,7 +174,7 @@ function from_walks!(walks::Vector{Tuple}, k::Int64, fo_map::Dict{String, Intege
                 ko_map[v] = new_konode_idx
                 new_konode_idx += 1
             end
-            edge = Tuple([ko_map[u],ko_map[v]])
+            edge = Tuple{Integer, Integer}([ko_map[u],ko_map[v]])
             if !haskey(ko_edgelist, edge)
                ko_edgelist[edge] = 0
             end

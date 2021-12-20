@@ -25,6 +25,7 @@ Run a line-graph sampling simulation.
 function sample_properties(input_file, k, frequency, walk_interval, num_intervals, num_samples, output_file)
     println("Reading graph.")
     fo, fo_map, ko, ko_map = from_ngram(input_file, frequency, k)
+    rev_fo_map = Dict{Integer, String}(val=>key for (key,val) in fo_map)
     println("Done.")
     println("Converting observed kth-order edges to walks.")
     walk_edges, weights = walks_from_edges(ko, ko_map, fo_map)
@@ -42,18 +43,19 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
     Threads.@threads for run in range(1, num_samples)
         println("Run: $run")
         sampled_walks = sample(all_kedge_walks, walk_interval)
-        print(sampled_walks[1])
+        sampled_set = Set(sampled_walks)
         for i in range(1, num_intervals)
             println("i: $i, num walks: $(i*walk_interval)")
             # Construct a kth-order graph from these walks
-            fo_s, ko_s = from_walks!(sampled_walks, k, fo_map, ko_map)
+            fo_s, ko_s = from_walks!(sampled_walks, k, rev_fo_map, ko_map)
             # Get the set of kth order nodes
-            num_observed, num_unobserved = compare_nodes(sampled_walks, walk_edges_set)
+            num_observed, num_unobserved = compare_nodes(sampled_set, walk_edges_set)
             observed_sampled[run,i] = num_observed / ne(ko)
             unobserved_sampled[run,i] = num_unobserved / total_korder_nodes
             missing_nodes[run,i] = nv(fo_s) / nv(fo)
             missing_edges[run,i] = ne(fo_s) / ne(fo)
             append!(sampled_walks, sample(all_kedge_walks, walk_interval))
+            union!(sampled_set, Set(sampled_walks))
         end
     end
 
