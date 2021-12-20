@@ -42,6 +42,7 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
     Threads.@threads for run in range(1, num_samples)
         println("Run: $run")
         sampled_walks = sample(all_kedge_walks, walk_interval)
+        print(sampled_walks[1])
         for i in range(1, num_intervals)
             println("i: $i, num walks: $(i*walk_interval)")
             # Construct a kth-order graph from these walks

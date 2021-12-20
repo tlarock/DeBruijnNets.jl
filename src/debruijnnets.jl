@@ -127,17 +127,18 @@ weights in ko as weights for walks.
 """
 function walks_from_edges(ko, ko_map, fo_map)
     A = adjacency_matrix(ko)
-    cids = Tuple{CartesianIndex}(findall(>(0), A))
+    cids = findall(>(0), A)
     edges_as_walks = Vector{Tuple}(undef, length(cids))
     ko_rev_map = Dict(value => key for (key, value) in ko_map)
     weights = Vector{Int64}(undef, ne(ko))
-    Threads.@threads for cidx in cids
-        id = Threads.threadid()
+    Threads.@threads for aidx in range(1, length(cids))
+        cidx = cids[aidx]
         u, v = Tuple(cidx)
-        ko_u = ko_rev_map[u]
-        ko_v = ko_rev_map[v]
-        edges_as_walks[id] = Tuple{Vararg{AbstractString}}([ko_u...,ko_v[end]])
-        weights[id] = A[u, v]
+        ko_u = Tuple([fo_map[j] for j in ko_rev_map[u]])
+        ko_v = Tuple([fo_map[j] for j in ko_rev_map[v]])
+        walk = Tuple{Vararg{Int64}}([ko_u...,ko_v[end]])
+        edges_as_walks[aidx] = walk
+        weights[aidx] = A[u, v]
     end
     return edges_as_walks, weights
 end
