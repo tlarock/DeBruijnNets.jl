@@ -118,4 +118,6 @@ function main()
     sample_properties(input_filepath, k, frequency, walk_interval, num_intervals, runs, output_file)
 end
 
-#main()
+if abspath(PROGRAM_FILE) == @__FILE__
+    main()
+end
