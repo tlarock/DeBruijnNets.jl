@@ -26,6 +26,7 @@ end
 
 """
 function sample_properties(input_file, k, frequency, walk_interval, num_intervals, num_samples, output_file)
+    print_interval = 100
     println("Reading graph.")
     fo, fo_map, ko, ko_map = from_ngram(input_file, frequency, k)
     rev_fo_map = Dict{Integer, String}(val=>key for (key,val) in fo_map)
@@ -46,18 +47,39 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
         println("Run: $run")
         sampled_walks = sample(all_kedge_walks, walk_interval)
         sampled_set = Set(sampled_walks)
+        cmp_set = deepcopy(sampled_set)
+        interval_count = 0
+        intervals_run = 0
+        num_observed = 0
+        num_unobserved = 0
         for i in range(1, num_intervals)
-            println("i: $i, num walks: $(i*walk_interval)")
+            interval_count += 1
+            if interval_count == print_interval
+                println("i: $i, num walks: $(i*walk_interval)")
+                interval_count = 0
+            end
+
             # Construct a kth-order graph from these walks
             fo_s, ko_s, ko_map = from_walks(sampled_walks, k, rev_fo_map, ko_map)
             # Compare sampled walks to observed walks
-            num_observed, num_unobserved = compare_nodes(sampled_set, walk_edges_set)
+            no, nu = compare_nodes(cmp_set, walk_edges_set)
+            num_observed += no
+            num_unobserved += nu
+            # Update ko stats
             observed_sampled[run,i] = num_observed / ne(ko)
             unobserved_sampled[run,i] = num_unobserved / total_korder_nodes
+
+            # Update fo stats
             missing_nodes[run,i] = nv(fo_s) / nv(fo)
             missing_edges[run,i] = ne(fo_s) / ne(fo)
-            append!(sampled_walks, sample(all_kedge_walks, walk_interval))
-            union!(sampled_set, Set(sampled_walks))
+
+            # Compute next set of walks
+            nxt_walks = sample(all_kedge_walks, walk_interval)
+            append!(sampled_walks, nxt_walks)
+            nxt_walks_set = Set(nxt_walks)
+            # Only analyze new walks
+            cmp_set = setdiff(nxt_walks_set,sampled_set)
+            union!(sampled_set, nxt_walks_set)
         end
     end
 
