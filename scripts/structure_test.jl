@@ -33,6 +33,7 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
     println("Done.")
     println("Converting observed kth-order edges to walks.")
     walk_edges, weights = walks_from_edges(ko, ko_map, fo_map)
+    num_ko_edges = length(walk_edges)
     println("Done.")
     walk_edges_set = Set{Tuple}(walk_edges)
     println("Computing all possible k-edge walks.")
@@ -52,21 +53,17 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
         intervals_run = 0
         num_observed = 0
         num_unobserved = 0
-        for i in range(1, num_intervals)
-            interval_count += 1
-            if interval_count == print_interval
-                println("i: $i, num walks: $(i*walk_interval)")
-                interval_count = 0
-            end
-
+        # Redefining makes this type stable
+        new_ko_map = deepcopy(ko_map)
+        for i in range(1, num_intervals) 
             # Construct a kth-order graph from these walks
-            fo_s, ko_s, ko_map = from_walks(sampled_walks, k, rev_fo_map, ko_map)
+            fo_s, ko_s, new_ko_map = from_walks(sampled_walks, k, rev_fo_map, new_ko_map)
             # Compare sampled walks to observed walks
             no, nu = compare_nodes(cmp_set, walk_edges_set)
             num_observed += no
             num_unobserved += nu
             # Update ko stats
-            observed_sampled[run,i] = num_observed / ne(ko)
+            observed_sampled[run,i] = num_observed / num_ko_edges
             unobserved_sampled[run,i] = num_unobserved / total_korder_nodes
 
             # Update fo stats
@@ -77,9 +74,18 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
             nxt_walks = sample(all_kedge_walks, walk_interval)
             append!(sampled_walks, nxt_walks)
             nxt_walks_set = Set(nxt_walks)
+
             # Only analyze new walks
             cmp_set = setdiff(nxt_walks_set,sampled_set)
             union!(sampled_set, nxt_walks_set)
+
+            # Print for logging
+            interval_count += 1
+            if interval_count == print_interval
+                println("i: $i, num walks: $(i*walk_interval)")
+                interval_count = 0
+            end
+
         end
     end
 

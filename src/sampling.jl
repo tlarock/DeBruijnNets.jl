@@ -18,8 +18,8 @@ function all_walks(adjacency_dict, start_node, k)
     curr_walks = Vector{Tuple}()
     neighbors = adjacency_dict[start_node]
     for ne in neighbors
-	    edge = Tuple((start_node, ne))
-	    push!(curr_walks, Tuple(edge))
+        edge = Tuple((start_node, ne))
+        push!(curr_walks, Tuple(edge))
     end
     for i in range(2, k)
         new_walks = Vector{Tuple}()
