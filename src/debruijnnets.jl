@@ -148,10 +148,11 @@ Construct a graph from input walks.
 
 NOTE: Expects nodes to be integers.
 """
-function from_walks(walks::Vector{Tuple}, k::Int64, rev_fo_map::Dict{Integer, String}, ko_map::Dict{Tuple, Integer})
+function from_walks(walks::Vector{Tuple}, k::Int64, rev_fo_map::Dict{Integer, String})
+    ko_map = Dict{Tuple, Integer}()
     fo_edgelist = Dict{Tuple, Integer}()
     ko_edgelist = Dict{Tuple, Integer}()
-    new_konode_idx = length(ko_map)+1
+    new_konode_idx = 1
     for w in walks
         for i in range(2, length(w))
             edge = w[i-1]...,w[i]
@@ -215,7 +216,8 @@ function get_all_walks_with_nodes(G, k)
         for walk in nodewalks
             u = walk[1:end-1]
             v = walk[2:end]
-            push!(nodes, Tuple([u,v]))
+            push!(nodes, u)
+            push!(nodes, v)
         end
     end
     return walklist, nodes

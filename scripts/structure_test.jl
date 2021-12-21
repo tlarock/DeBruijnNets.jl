@@ -5,22 +5,18 @@ include("../src/motifs.jl")
 include("../src/randomwalks.jl")
 include("../src/hypa.jl")
 
-function compare_nodes(walks, walk_edges)
+function compare_nodes(observed_nodes, sampled_nodes)
     observed = 0
     unobserved = 0
-    for w in walks
-        if w in walk_edges
+    for node in sampled_nodes 
+        if node in observed_nodes
             observed += 1
         else
-            if length(w) != length(first(walk_edges))
-                println(w)
-            end
             unobserved += 1
         end
     end
     return observed, unobserved
 end
-
 
 """
 
@@ -30,15 +26,18 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
     println("Reading graph.")
     fo, fo_map, ko, ko_map = from_ngram(input_file, frequency, k)
     rev_fo_map = Dict{Integer, String}(val=>key for (key,val) in fo_map)
+    # Observed first-order nodes/edges
+    observed_fo_nodes = length(fo_map)
+    observed_fo_edges = ne(fo)
+    # Observed kth-order nodes
+    observed_nodes = Set{Tuple}(keys(ko_map))
+    observed_korder_nodes = length(observed_nodes)
     println("Done.")
-    println("Converting observed kth-order edges to walks.")
-    walk_edges, weights = walks_from_edges(ko, ko_map, fo_map)
-    num_ko_edges = length(walk_edges)
-    println("Done.")
-    walk_edges_set = Set{Tuple}(walk_edges)
     println("Computing all possible k-edge walks.")
-    all_kedge_walks, nodes = get_all_walks_with_nodes(fo, k)
-    total_korder_nodes = length(nodes)
+    all_kedge_walks, all_korder_nodes = get_all_walks_with_nodes(fo, k)
+    total_korder_nodes = length(all_korder_nodes)
+    println("observed_korder_nodes: $(observed_korder_nodes)")
+    println("total_korder_nodes: $(total_korder_nodes)")
     println("Done.")
     observed_sampled = zeros(Float64, num_samples, num_intervals)
     unobserved_sampled = zeros(Float64, num_samples, num_intervals)
@@ -47,45 +46,40 @@ function sample_properties(input_file, k, frequency, walk_interval, num_interval
     Threads.@threads for run in range(1, num_samples)
         println("Run: $run")
         sampled_walks = sample(all_kedge_walks, walk_interval)
-        sampled_set = Set(sampled_walks)
-        cmp_set = deepcopy(sampled_set)
         interval_count = 0
         intervals_run = 0
-        num_observed = 0
-        num_unobserved = 0
         # Redefining makes this type stable
-        new_ko_map = deepcopy(ko_map)
-        for i in range(1, num_intervals) 
+        #for i in range(1, num_intervals) 
+        no::Integer = 0
+        nu::Integer = 0
+        i = 1
+        while (nu / total_korder_nodes) < 1.0
             # Construct a kth-order graph from these walks
-            fo_s, ko_s, new_ko_map = from_walks(sampled_walks, k, rev_fo_map, new_ko_map)
-            # Compare sampled walks to observed walks
-            no, nu = compare_nodes(cmp_set, walk_edges_set)
-            num_observed += no
-            num_unobserved += nu
+            fo_s, ko_s, new_ko_map = from_walks(sampled_walks, k, rev_fo_map)
+            sampled_nodes = Set{Tuple}(keys(new_ko_map))
+            
+            # Compare nodes from sampled walks to nodes from observed walks
+            no, nu = compare_nodes(observed_nodes, sampled_nodes)
+
             # Update ko stats
-            observed_sampled[run,i] = num_observed / num_ko_edges
-            unobserved_sampled[run,i] = num_unobserved / total_korder_nodes
+            observed_sampled[run,i] = no / observed_korder_nodes
+            unobserved_sampled[run,i] = nu / total_korder_nodes
 
             # Update fo stats
-            missing_nodes[run,i] = nv(fo_s) / nv(fo)
-            missing_edges[run,i] = ne(fo_s) / ne(fo)
+            missing_nodes[run,i] = nv(fo_s) / observed_fo_nodes
+            missing_edges[run,i] = ne(fo_s) / observed_fo_edges
 
             # Compute next set of walks
             nxt_walks = sample(all_kedge_walks, walk_interval)
             append!(sampled_walks, nxt_walks)
-            nxt_walks_set = Set(nxt_walks)
-
-            # Only analyze new walks
-            cmp_set = setdiff(nxt_walks_set,sampled_set)
-            union!(sampled_set, nxt_walks_set)
 
             # Print for logging
             interval_count += 1
             if interval_count == print_interval
-                println("i: $i, num walks: $(i*walk_interval)")
+                println("i: $i, num walks: $(i*walk_interval), proportion unobserved: $(nu/total_korder_nodes)")
                 interval_count = 0
             end
-
+            i += 1
         end
     end
 
