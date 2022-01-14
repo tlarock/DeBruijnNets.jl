@@ -184,6 +184,7 @@ elseif ensemble == "bdg"
     sampled_counts = bdg(fo, ko, ko_map, fo_map, k, M, num_samples, empirical_motifs)
     output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble).csv"
 elseif ensemble == "hypa"
+    println("WARNING: hypa implementation has an over/underflow issue that has not been resolved. Use at your own risk.")
     sampled_counts = hypa_sample(fo, ko, ko_map, fo_map, k, num_samples, empirical_motifs)
     output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-h.csv"
 end
