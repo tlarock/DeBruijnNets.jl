@@ -125,7 +125,8 @@ function parse_commandline(args)
     @add_arg_table s begin
 	"--input_file", "-i"
         help = "Full path to input file"
-        #arg_type = String
+    "--output_directory", "-o"
+        help = "Path to output directory"
 	"--frequency", "-f"
 	    help = "Frequencies in ngram?"
 	    action = :store_true
@@ -151,8 +152,13 @@ arguments = parse_commandline(ARGS)
 println(arguments)
 input_filepath = arguments["input_file"]
 println(input_filepath)
+
+output_filepath = arguments["output_directory"]
+println(output_filepath)
+
 frequency = arguments["frequency"]
 println(frequency)
+
 k = arguments["k"]
 walks_per_node = arguments["walks_per_node"]
 num_samples = arguments["num_samples"]
@@ -176,17 +182,17 @@ println(empirical_motifs)
 M = sum(values(empirical_motifs))
 if ensemble == "lg-s"
     sampled_counts = lgs(fo, k, M, num_samples, walks_per_node, empirical_motifs)
-    output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble)_bn_ww_wpn-$(walks_per_node).csv"
+    output_filename = output_filepath * "$(ngram_filename)_k-$(k)_e-$(ensemble)_bn_ww_wpn-$(walks_per_node).csv"
 elseif ensemble == "rw-uw" || ensemble == "rw-w"
     sampled_counts = rw(fo, k, M, num_samples, empirical_motifs, false, weighted)
-    output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble).csv"
+    output_filename = output_filepath * "$(ngram_filename)_k-$(k)_e-$(ensemble).csv"
 elseif ensemble == "bdg"
     sampled_counts = bdg(fo, ko, ko_map, fo_map, k, M, num_samples, empirical_motifs)
-    output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-$(ensemble).csv"
+    output_filename = output_filepath * "$(ngram_filename)_k-$(k)_e-$(ensemble).csv"
 elseif ensemble == "hypa"
     println("WARNING: hypa implementation has an over/underflow issue that has not been resolved. Use at your own risk.")
     sampled_counts = hypa_sample(fo, ko, ko_map, fo_map, k, num_samples, empirical_motifs)
-    output_filename = "../../debruijn-nets/results/motifs/$(ngram_filename)_k-$(k)_e-h.csv"
+    output_filename = output_filepath * "$(ngram_filename)_k-$(k)_e-h.csv"
 end
 
 println(sampled_counts)
