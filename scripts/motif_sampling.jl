@@ -6,7 +6,7 @@ include("../src/randomwalks.jl")
 include("../src/hypa.jl")
 
 """
-Run a hypa simulation
+    Sample walks from the HYPA ensemble.
 """
 function hypa_sample(fo, ko, ko_map, fo_map, k, num_samples, empirical_motifs)
     ko_rev_map = Dict(val=>key for (key,val) in ko_map)
@@ -43,9 +43,9 @@ function hypa_sample(fo, ko, ko_map, fo_map, k, num_samples, empirical_motifs)
 end
 
 """
-Run a Biased DeBruijn graph simulation.
+    Sample walks from the observed debruijn graph.
 """
-function bdg(fo, ko, ko_map, fo_map, k, M, num_samples, empirical_motifs)
+function odg(fo, ko, ko_map, fo_map, k, M, num_samples, empirical_motifs)
     # Get all of the walks from the korder graph
     all_walks, weights = walks_from_edges(ko, ko_map, fo_map)
     sampled_counts = Dict(m=>Dict("frequency"=>empirical_motifs[m], "samples"=>zeros(num_samples)) for m in keys(empirical_motifs))
@@ -62,9 +62,9 @@ function bdg(fo, ko, ko_map, fo_map, k, M, num_samples, empirical_motifs)
 end
 
 """
-Run a line-graph sampling simulation.
+    Sample walks from the complete debruijn graph.
 """
-function lgs(fo, k, M, num_samples,  walks_per_node, empirical_motifs)
+function cdg(fo, k, M, num_samples,  walks_per_node, empirical_motifs)
     println("wpn: $walks_per_node.")
     if walks_per_node < 0
         println("Computing all walks for every node.")
@@ -90,7 +90,7 @@ function lgs(fo, k, M, num_samples,  walks_per_node, empirical_motifs)
 end
 
 """
-    Run a random-walk sampling simulation.
+    Sample walks by simulating random walks.
 """
 function rw(fo, k::Integer, M::Integer , num_samples::Integer, empirical_motifs,
         bias_nodes::Bool=false, weighted::Bool=false)
@@ -109,7 +109,9 @@ function rw(fo, k::Integer, M::Integer , num_samples::Integer, empirical_motifs,
     return sampled_counts
 end
 
-
+"""
+    Write sampled_counts to output_file.
+"""
 function write_counts(sampled_counts, output_file)
     open(output_file, "w") do file
         for (m, mdict) in sampled_counts
@@ -120,6 +122,9 @@ function write_counts(sampled_counts, output_file)
     return nothing
 end
 
+"""
+    Function for ArgParse to parse the command line arguments.
+"""
 function parse_commandline(args)
     s = ArgParseSettings()
     @add_arg_table s begin
@@ -147,53 +152,75 @@ function parse_commandline(args)
 return parse_args(args, s)
 end
 
+# Parse command line args
 arguments = parse_commandline(ARGS)
-
 println(arguments)
+
+# Get input file
 input_filepath = arguments["input_file"]
 println(input_filepath)
+splitpath = split(input_filepath, '/')
+ngram_filename = splitpath[end]
 
+# Get output directory
 output_filepath = arguments["output_directory"]
 println(output_filepath)
 
-frequency = arguments["frequency"]
-println(frequency)
-
-k = arguments["k"]
-walks_per_node = arguments["walks_per_node"]
-num_samples = arguments["num_samples"]
+# Get the ensemble to sample from
 ensemble = arguments["ensemble"]
-num_cpus = Threads.nthreads()
-splitpath = split(input_filepath, '/')
-ngram_filename = splitpath[end]
 weighted = false
 if ensemble == "rw-w"
     weighted = true
 end
+
+# Get boolean for whether ngram file includes frequencies
+frequency = arguments["frequency"]
+println(frequency)
+
+# Get k
+k = arguments["k"]
 println("k: $k")
+
+# Get wpn (-1 to ignore)
+walks_per_node = arguments["walks_per_node"]
+
+# Get number of samples
+num_samples = arguments["num_samples"]
+
+# Set number of cpus
+num_cpus = Threads.nthreads()
+
+# Construct the kth-order DeBruijn graph
 fo, fo_map, ko, ko_map = from_ngram(input_filepath, frequency, k);
 if has_self_loops(fo)
    println("fo has selfloops..")
 end
-# Count motifs
+
+# Count motifs in observed data
 walks, walk_freqs = walks_from_edges(ko, ko_map, fo_map)
 empirical_motifs = count_motifs(walks, walk_freqs)
 println(empirical_motifs)
+
 M = sum(values(empirical_motifs))
-if ensemble == "lg-s"
-    sampled_counts = lgs(fo, k, M, num_samples, walks_per_node, empirical_motifs)
+if ensemble == "cdg"
+    # Complete DeBruijn graph
+    sampled_counts = cdg(fo, k, M, num_samples, walks_per_node, empirical_motifs)
     output_filename = output_filepath * "$(ngram_filename)_k-$(k)_e-$(ensemble)_bn_ww_wpn-$(walks_per_node).csv"
-elseif ensemble == "rw-uw" || ensemble == "rw-w"
-    sampled_counts = rw(fo, k, M, num_samples, empirical_motifs, false, weighted)
-    output_filename = output_filepath * "$(ngram_filename)_k-$(k)_e-$(ensemble).csv"
-elseif ensemble == "bdg"
-    sampled_counts = bdg(fo, ko, ko_map, fo_map, k, M, num_samples, empirical_motifs)
+elseif ensemble == "odg"
+    # Observed DeBruijn graph
+    sampled_counts = odg(fo, ko, ko_map, fo_map, k, M, num_samples, empirical_motifs)
     output_filename = output_filepath * "$(ngram_filename)_k-$(k)_e-$(ensemble).csv"
 elseif ensemble == "hypa"
+    # Hypa
     println("WARNING: hypa implementation has an over/underflow issue that has not been resolved. Use at your own risk.")
     sampled_counts = hypa_sample(fo, ko, ko_map, fo_map, k, num_samples, empirical_motifs)
     output_filename = output_filepath * "$(ngram_filename)_k-$(k)_e-h.csv"
+elseif ensemble == "rw-uw" || ensemble == "rw-w"
+    # Random walk (unweighted or weighted)
+    sampled_counts = rw(fo, k, M, num_samples, empirical_motifs, false, weighted)
+    output_filename = output_filepath * "$(ngram_filename)_k-$(k)_e-$(ensemble).csv"
 end
 
+# Print and write output
 println(sampled_counts)
 write_counts(sampled_counts, output_filename)
