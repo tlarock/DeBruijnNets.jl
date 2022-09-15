@@ -80,11 +80,12 @@ function from_ngram(file::String, frequency::Bool, k::Integer)
         remove_selfloops!(walk) 
         for i in range(1, length(walk))
             if i > 1
+                # First order network processing
                 u = walk[i-1]
                 v = walk[i]
-		if u == v
-		    println("Self-loop: $u, $v")
-		end
+                if u == v
+                    println("Self-loop: $u, $v")
+                end
                 fo_idx = add_to_mapping!(fo_map, u, fo_idx)
                 fo_idx = add_to_mapping!(fo_map, v, fo_idx)
                 if haskey(fo_edgelist, (fo_map[u],fo_map[v]))
@@ -93,15 +94,16 @@ function from_ngram(file::String, frequency::Bool, k::Integer)
                     fo_edgelist[(fo_map[u],fo_map[v])] = freq
                 end
             end
+
             if i < length(walk)-k+1
+                # Debruijn graph processing
                 u = Tuple(walk[i:i+k-1])
                 v = Tuple(walk[i+1:i+k])
-		if u == v
-		    println("Self-loop: $u, $v")
-		end
+                if u == v
+                    println("Self-loop: $u, $v")
+                end
                 ko_idx = add_to_mapping!(ko_map, u, ko_idx)
                 ko_idx = add_to_mapping!(ko_map, v, ko_idx)
-
                 if haskey(ko_edgelist, (ko_map[u],ko_map[v]))
                     ko_edgelist[(ko_map[u],ko_map[v])] += freq
                 else
@@ -221,4 +223,38 @@ function get_all_walks_with_nodes(G, k)
         end
     end
     return walklist, nodes
+end
+
+"""
+    Get a list of walks with frequencies from an ngram file.
+"""
+function walks_from_ngram(file::String, frequency::Bool)
+    fo_map = Dict{String, Int64}()
+    walks = Dict{Tuple, Int64}()
+    fin = open(file)
+    fo_idx = 1
+    for line in eachline(fin)
+        s = split(line, ',')
+        if frequency
+            walk = s[1:end-1]
+            freq = parse(Float64, s[end])
+        else
+            walk = s 
+            freq = 1 
+        end 
+        remove_selfloops!(walk) 
+        for i in range(1, length(walk))
+            u = walk[i]
+            fo_idx = add_to_mapping!(fo_map, u, fo_idx)
+        end
+        mapped_walk = Tuple([fo_map[u] for u in walk])
+        if !haskey(walks, mapped_walk)
+            walks[mapped_walk] = freq
+        else
+            walks[mapped_walk] += freq
+        end
+    end
+    close(fin)
+    
+    return walks, fo_map
 end
